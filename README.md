@@ -17,6 +17,43 @@ PackUpdate is a Python utility designed to help developers manage and update the
 
 ## Installation
 
+Install the library using pip:
+
+```bash
+pip install packUpdate
+```
+
+## Usage
+
+Run the CLI tool to update Node.js project dependencies:
+
+```bash
+packUpdate <project_path> [--safe] [--pass=N]
+```
+
+### Examples
+
+- Basic Update:
+  ```bash
+  packUpdate /path/to/project
+  ```
+
+- Safe Mode:
+  ```bash
+  packUpdate /path/to/project --safe
+  ```
+
+- Multiple Passes:
+  ```bash
+  packUpdate /path/to/project --pass=3
+  ```
+
+- Safe Mode with Multiple Passes:
+  ```bash
+  packUpdate /path/to/project --safe --pass=3
+  ```
+
+
 Clone the repository to your local machine:
 
 ```bash

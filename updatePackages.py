@@ -110,9 +110,9 @@ def run_update_process(project_path, safe_mode, passes):
     subprocess.run(["npm", "audit", "fix"], cwd=project_path)
     subprocess.run(["npm", "run", "build"], cwd=project_path)
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) < 2:
-        print("Usage: python update_npm_packages.py <project_path> [--safe] [--pass=N]")
+        print("Usage: updatePackages <project_path> [--safe] [--pass=N]")
         sys.exit(1)
     
     project_path = sys.argv[1]
@@ -125,3 +125,6 @@ if __name__ == "__main__":
         sys.exit(1)
     
     run_update_process(project_path, safe_mode, passes)
+
+if __name__ == "__main__":
+    main()
