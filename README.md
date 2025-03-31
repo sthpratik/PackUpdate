@@ -28,31 +28,30 @@ pip install packUpdate
 Run the CLI tool to update Node.js project dependencies:
 
 ```bash
-packUpdate <project_path> [--safe] [--pass=N]
+updatePackages <project_path> [--safe] [--pass=N]
 ```
 
 ### Examples
 
 - Basic Update:
   ```bash
-  packUpdate /path/to/project
+  updatePackages /path/to/project
   ```
 
 - Safe Mode:
   ```bash
-  packUpdate /path/to/project --safe
+  updatePackages /path/to/project --safe
   ```
 
 - Multiple Passes:
   ```bash
-  packUpdate /path/to/project --pass=3
+  updatePackages /path/to/project --pass=3
   ```
 
 - Safe Mode with Multiple Passes:
   ```bash
-  packUpdate /path/to/project --safe --pass=3
+  updatePackages /path/to/project --safe --pass=3
   ```
-
 
 Clone the repository to your local machine:
 
@@ -149,6 +148,43 @@ If you encounter issues after running the script, you can manually revert to a p
    ```
 3. Review the logs to confirm updates and audit fixes.
 4. Run your application to verify everything works as expected.
+
+## Publishing to PyPI
+
+To publish the `PackUpdate` package to PyPI, follow these steps:
+
+1. **Install Required Tools**:
+   Ensure you have `setuptools`, `wheel`, and `twine` installed:
+   ```bash
+   pip install setuptools wheel twine
+   ```
+
+2. **Build the Package**:
+   Run the following command to create the distribution files:
+   ```bash
+   python setup.py sdist bdist_wheel
+   ```
+
+   This will generate the `dist/` directory containing the `.tar.gz` and `.whl` files.
+
+3. **Upload to PyPI**:
+   Use `twine` to upload the package to PyPI:
+   ```bash
+   twine upload dist/*
+   ```
+
+4. **Authenticate**:
+   Enter your PyPI username and password when prompted.
+
+5. **Verify the Upload**:
+   Visit [https://pypi.org/project/PackUpdate/](https://pypi.org/project/PackUpdate/) to confirm the package is live.
+
+### Notes:
+- Ensure your `setup.py` file is correctly configured with metadata like `name`, `version`, `author`, etc.
+- If you are testing the upload, use the Test PyPI repository:
+  ```bash
+  twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+  ```
 
 ## Contributing
 
