@@ -20,7 +20,7 @@ PackUpdate is a Python utility designed to help developers manage and update the
 Install the library using pip:
 
 ```bash
-pip install packUpdate
+pip install packupdate
 ```
 
 ## Usage

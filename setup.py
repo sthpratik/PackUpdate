@@ -1,9 +1,16 @@
 from setuptools import setup, find_packages
 
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
-    name="packUpdate",
-    version="1.0.1",
+    name="packupdate",
+    version="1.0.2",
     description="A Python utility to update Node.js project dependencies safely.",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
     author="Manish Shrestha",
     author_email="sth.pratik@gmail.com",
     url="https://github.com/sthpratik/PackUpdate",
