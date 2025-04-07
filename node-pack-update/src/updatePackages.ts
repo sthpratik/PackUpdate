@@ -1,4 +1,4 @@
-import { execSync, spawnSync } from "child_process";
+import { spawnSync } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -13,7 +13,7 @@ interface UpdateResult {
   failed: string[]; // List of failed packages
 }
 
-function printOutdatedPackages(outdatedPackages: Record<string, OutdatedPackage>): void {
+const printOutdatedPackages = (outdatedPackages: Record<string, OutdatedPackage>): void => {
   console.log("\nOutdated Packages:");
   console.log(`${"Package".padEnd(40)} ${"Current".padEnd(10)} ${"Wanted".padEnd(10)} ${"Latest".padEnd(10)}`);
   console.log("-".repeat(70));
@@ -23,9 +23,9 @@ function printOutdatedPackages(outdatedPackages: Record<string, OutdatedPackage>
     );
   }
   console.log("-".repeat(70));
-}
+};
 
-function getOutdatedPackages(projectPath: string): Record<string, OutdatedPackage> {
+const getOutdatedPackages = (projectPath: string): Record<string, OutdatedPackage> => {
   const result = spawnSync("npm", ["outdated", "--json"], { cwd: projectPath, encoding: "utf-8" });
 
   if (result.error) {
@@ -48,23 +48,32 @@ function getOutdatedPackages(projectPath: string): Record<string, OutdatedPackag
   }
 
   return {};
-}
+};
 
-function getDependencyTree(projectPath: string): Record<string, any> {
-  try {
-    const result = spawnSync("npm", ["ls", "--json"], { cwd: projectPath, encoding: "utf-8" });
-    return JSON.parse(result.stdout);
-  } catch (error) {
-    console.error("Error running npm ls:", error);
+const getDependencyTree = (projectPath: string): Record<string, any> => {
+  const result = spawnSync("npm", ["ls", "--json"], { cwd: projectPath, encoding: "utf-8" });
+
+  if (result.error) {
+    console.error("Error running npm ls:", result.error);
     return {};
   }
-}
 
-function resolveUpdateOrder(outdatedPackages: Record<string, OutdatedPackage>, dependencyTree: Record<string, any>): string[] {
+  try {
+    return JSON.parse(result.stdout);
+  } catch (parseError) {
+    console.error("Error parsing npm ls output:", parseError);
+    return {};
+  }
+};
+
+const resolveUpdateOrder = (
+  outdatedPackages: Record<string, OutdatedPackage>,
+  dependencyTree: Record<string, any>
+): string[] => {
   const resolvedOrder: string[] = [];
   const visited = new Set<string>();
 
-  function visit(packageName: string): void {
+  const visit = (packageName: string): void => {
     if (visited.has(packageName)) return;
     visited.add(packageName);
 
@@ -73,16 +82,16 @@ function resolveUpdateOrder(outdatedPackages: Record<string, OutdatedPackage>, d
       if (outdatedPackages[dep]) visit(dep);
     }
     resolvedOrder.push(packageName);
-  }
+  };
 
   for (const pkg of Object.keys(outdatedPackages)) {
     visit(pkg);
   }
 
   return resolvedOrder;
-}
+};
 
-function executeScriptIfExists(projectPath: string, scriptName: string): boolean {
+const executeScriptIfExists = (projectPath: string, scriptName: string): boolean => {
   const packageJsonPath = path.join(projectPath, "package.json");
   if (!fs.existsSync(packageJsonPath)) return false;
 
@@ -99,23 +108,23 @@ function executeScriptIfExists(projectPath: string, scriptName: string): boolean
     console.error("Error reading package.json:", error);
     return false;
   }
-}
+};
 
-function runTests(projectPath: string): void {
+const runTests = (projectPath: string): void => {
   console.log("\nRunning build...");
   if (!executeScriptIfExists(projectPath, "build")) throw new Error("Build failed.");
 
   console.log("\nRunning tests...");
   if (!executeScriptIfExists(projectPath, "test")) throw new Error("Tests failed.");
-}
+};
 
-function installPackage(packageName: string, version: string, projectPath: string): void {
+const installPackage = (packageName: string, version: string, projectPath: string): void => {
   console.log(`\nInstalling ${packageName}@${version}...`);
   const result = spawnSync("npm", ["install", `${packageName}@${version}`], { cwd: projectPath, stdio: "inherit" });
   if (result.status !== 0) throw new Error(`Failed to install ${packageName}@${version}`);
-}
+};
 
-function updatePackagesInPass(projectPath: string, safeMode: boolean): UpdateResult {
+const updatePackagesInPass = (projectPath: string, safeMode: boolean): UpdateResult => {
   const outdatedPackages = getOutdatedPackages(projectPath);
   if (Object.keys(outdatedPackages).length === 0) {
     console.log("No outdated packages found.");
@@ -150,9 +159,9 @@ function updatePackagesInPass(projectPath: string, safeMode: boolean): UpdateRes
   }
 
   return { updated, failed };
-}
+};
 
-function printFinalSummary(allResults: UpdateResult[], passes: number): void {
+const printFinalSummary = (allResults: UpdateResult[], passes: number): void => {
   console.log("\nFinal Update Summary:");
   console.log(`${"Package".padEnd(40)} ${"Old Version".padEnd(10)} ${"New Version".padEnd(10)}`);
   console.log("-".repeat(60));
@@ -169,9 +178,9 @@ function printFinalSummary(allResults: UpdateResult[], passes: number): void {
     console.log("\nPackages that failed to update:");
     allFailed.forEach((pkg) => console.log(`- ${pkg}`));
   }
-}
+};
 
-function main(): void {
+const main = (): void => {
   const projectPath = process.argv[2] || process.cwd();
   const safeMode = process.argv.includes("--safe");
   const passArg = process.argv.find((arg) => arg.startsWith("--pass="));
@@ -195,6 +204,6 @@ function main(): void {
   }
 
   printFinalSummary(allResults, passes);
-}
+};
 
 main();

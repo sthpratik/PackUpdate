@@ -28,29 +28,29 @@ pip install packupdate
 Run the CLI tool to update Node.js project dependencies:
 
 ```bash
-updatePackages <project_path> [--safe] [--pass=N]
+updatepackages <project_path> [--safe] [--pass=N]
 ```
 
 ### Examples
 
 - Basic Update:
   ```bash
-  updatePackages /path/to/project
+  updatepackages /path/to/project
   ```
 
 - Safe Mode:
   ```bash
-  updatePackages /path/to/project --safe
+  updatepackages /path/to/project --safe
   ```
 
 - Multiple Passes:
   ```bash
-  updatePackages /path/to/project --pass=3
+  updatepackages /path/to/project --pass=3
   ```
 
 - Safe Mode with Multiple Passes:
   ```bash
-  updatePackages /path/to/project --safe --pass=3
+  updatepackages /path/to/project --safe --pass=3
   ```
 
 Clone the repository to your local machine:
