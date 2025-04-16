@@ -13,7 +13,9 @@
     "copy-files": "cp -a ./src/* ./dist/",
     "clean": "rm -rf dist",
     "start": "node dist/updatePackages.js --safe --pass=2",
-    "test": "echo \"No tests specified\" && exit 0"
+    "test": "echo \"No tests specified\" && exit 0",
+    "prepare-readme": "cp ../docs/nodejs.md ./README.md",
+    "prepublishOnly": "npm run prepare-readme && npm run build"
   },
   "keywords": [
     "npm",

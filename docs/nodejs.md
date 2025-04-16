@@ -1,6 +1,6 @@
 # updatenpmpackages
 
-updatenpmpackages is a personal project designed to streamline and manage package updates efficiently. This is node package
+updatenpmpackages is a personal project designed to streamline and manage package updates efficiently.
 
 ## Features
 - Easy package management.
@@ -9,8 +9,8 @@ updatenpmpackages is a personal project designed to streamline and manage packag
 - Safe mode for testing updates before applying them.
 
 ## Installation
-### As a Standalone Application
-1. Clone the repository:
+### As a Standalone Application - [Documentation](https://sthpratik.github.io/PackUpdate/#/)
+1. Clone the repository: [Github](https://github.com/sthpratik/PackUpdate)
    ```bash
    git clone https://github.com/sthpratik/PackUpdate
    ```
@@ -23,7 +23,7 @@ updatenpmpackages is a personal project designed to streamline and manage packag
    npm install
    ```
 
-### As a Global Package
+### As a Global Package 
 1. Install `updatenpmpackages` globally via npm:
    ```bash
    npm install -g updatenpmpackages
