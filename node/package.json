@@ -1,9 +1,12 @@
 {
-  "name": "updatepackages",
-  "version": "0.1.0",
+  "name": "updatenpmpackages",
+  "version": "0.1.2",
   "description": "A Node.js package to automate updating npm packages with dependency resolution and testing.",
   "main": "dist/updatePackages.js",
   "types": "dist/updatePackages.d.ts",
+  "bin": {
+    "updatenpmpackages": "dist/updatePackages.js"
+  },
   "scripts": {
     "build": "npm run clean && tsc && npm run copy-files",
     "dev": "npm run build && npm run start",
@@ -22,15 +25,15 @@
   "author": "Manish Shrestha",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^20.17.30",
+    "@types/node": "^22.14.1",
     "typescript": "^5.0.0"
   },
   "dependencies": {
     "tsc-watch": "^6.2.1"
   },
   "readme": {
-    "title": "UpdatePackages",
-    "description": "`UpdatePackages` is a Node.js package that automates the process of updating outdated npm packages in a project. It resolves dependencies, runs tests, and provides a detailed summary of updates and failures.",
+    "title": "updatenpmpackages",
+    "description": "`updatenpmpackages` is a Node.js package that automates the process of updating outdated npm packages in a project. It resolves dependencies, runs tests, and provides a detailed summary of updates and failures.",
     "features": [
       "Automatically detects outdated npm packages.",
       "Resolves dependencies and updates packages in the correct order.",
@@ -38,6 +41,6 @@
       "Provides a detailed summary of updated and failed packages.",
       "Supports multiple passes to ensure all packages are updated."
     ],
-    "installation": "Install the package globally using npm:\n\n```bash\nnpm install -g updatepackages\n```"
+    "installation": "Install the package globally using npm:\n\n```bash\nnpm install -g updatenpmpackages\n```"
   }
 }

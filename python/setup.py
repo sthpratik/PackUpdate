@@ -2,12 +2,12 @@ from setuptools import setup, find_packages
 
 # read the contents of your README file
 from pathlib import Path
-this_directory = Path(__file__).parent
-long_description = (this_directory / "README.md").read_text()
+this_directory = Path(__file__).parent / "../docs"
+long_description = (this_directory / "python.md").read_text()
 
 setup(
     name="packupdate",
-    version="1.0.2",
+    version="1.0.4",
     description="A Python utility to update Node.js project dependencies safely.",
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -18,7 +18,7 @@ setup(
     install_requires=[],
     entry_points={
         "console_scripts": [
-            "updatePackages=packUpdate.updatePackages:main",  # Update the entry point
+            "updatenpmpackages=packUpdate.updatePackages:main",  # Change the command name here
         ],
     },
     classifiers=[
