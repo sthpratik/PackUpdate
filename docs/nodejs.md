@@ -1,6 +1,6 @@
 # updatenpmpackages
 
-updatenpmpackages is a personal project designed to streamline and manage package updates efficiently.
+updatenpmpackages is a personal project designed to streamline and manage package updates efficiently. This is node package
 
 ## Features
 - Easy package management.

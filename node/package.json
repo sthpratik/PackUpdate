@@ -1,6 +1,6 @@
 {
   "name": "updatenpmpackages",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A Node.js package to automate updating npm packages with dependency resolution and testing.",
   "main": "dist/updatePackages.js",
   "types": "dist/updatePackages.d.ts",

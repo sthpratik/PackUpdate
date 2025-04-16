@@ -6,7 +6,7 @@ PackUpdate is a versatile tool designed to streamline and manage package updates
 ## Overview
 
 PackUpdate is available as:
-- A **Node.js package** (`updatepackages`) for managing Node.js project dependencies.
+- A **Node.js package** (`updatenpmpackages`) for managing Node.js project dependencies.
 - A **Python package** for similar functionality using Python.
 
 ## Features
@@ -18,10 +18,10 @@ PackUpdate is available as:
 ## Installation and Usage
 
 ### Node.js Package
-For detailed instructions, visit the [Node.js Package Documentation](./docs/nodejs.md).
+For detailed instructions, visit the [Node.js Package Documentation](./nodejs.md).
 
 ### Python Package
-For detailed instructions, visit the [Python Package Documentation](./docs/python.md).
+For detailed instructions, visit the [Python Package Documentation](./python.md).
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request.
