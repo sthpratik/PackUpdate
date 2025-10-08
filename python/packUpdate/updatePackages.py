@@ -1,31 +1,54 @@
 import subprocess
 import os
 import sys
-import json  # Import the json module
+import json
+from datetime import datetime
+
+LOG_DIR = "logs"
+LOG_FILE = os.path.join(LOG_DIR, f"packupdate-{datetime.now().isoformat().replace(':', '-').replace('.', '-')}.log")
+QUIET_MODE = False
+
+def write_log(message):
+    """Write a message to the log file with timestamp."""
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR, exist_ok=True)
+    timestamp = datetime.now().isoformat()
+    with open(LOG_FILE, 'a') as f:
+        f.write(f"[{timestamp}] {message}\n")
+
+def log(message):
+    """Print message only if not in quiet mode."""
+    if not QUIET_MODE:
+        print(message)
 
 def print_outdated_packages(outdated_packages):
     """Print the outdated packages in a formatted table."""
-    print("\nOutdated Packages:")
-    print("{:<40} {:<10} {:<10} {:<10}".format("Package", "Current", "Wanted", "Latest"))
-    print("-" * 70)
+    log("\nOutdated Packages:")
+    log("{:<40} {:<10} {:<10} {:<10}".format("Package", "Current", "Wanted", "Latest"))
+    log("-" * 70)
     for package, details in outdated_packages.items():
         current_version = details.get("current", "N/A")
         wanted_version = details.get("wanted", "N/A")
         latest_version = details.get("latest", "N/A")
-        print("{:<40} {:<10} {:<10} {:<10}".format(package, current_version, wanted_version, latest_version))
-    print("-" * 70)
+        log("{:<40} {:<10} {:<10} {:<10}".format(package, current_version, wanted_version, latest_version))
+    log("-" * 70)
 
 def get_outdated_packages(project_path):
     result = subprocess.run(['npm', 'outdated', '--json'], cwd=project_path, capture_output=True, text=True)
     if result.returncode != 0 and result.stderr:
-        print("Error running npm outdated:", result.stderr)
+        error_msg = f"Error running npm outdated: {result.stderr}"
+        print(error_msg)
+        write_log(f"ERROR: {error_msg}")
         return {}
     
     try:
-        outdated_packages = json.loads(result.stdout)  # Use json.loads instead of eval
+        outdated_packages = json.loads(result.stdout) if result.stdout.strip() else {}
+        write_log(f"Found {len(outdated_packages)} outdated packages: {list(outdated_packages.keys())}")
         print_outdated_packages(outdated_packages)
     except Exception as e:
-        print("Error parsing npm outdated output:", e)
+        error_msg = f"Error parsing npm outdated output: {e}"
+        print(error_msg)
+        write_log(f"ERROR: {error_msg}")
         return {}
     
     return outdated_packages
@@ -40,9 +63,11 @@ def get_dependency_tree(project_path):
     try:
         result = subprocess.run(['npm', 'ls', '--json'], cwd=project_path, capture_output=True, text=True)
         sanitized_output = sanitize_json_output(result.stdout)
-        dependency_tree = json.loads(sanitized_output)  # Use sanitized JSON output
+        dependency_tree = json.loads(sanitized_output)
     except Exception as e:
-        print("Error parsing npm ls output:", e)
+        error_msg = f"Error parsing npm ls output: {e}"
+        print(error_msg)
+        write_log(f"ERROR: {error_msg}")
         return {}
     
     return dependency_tree
@@ -58,7 +83,7 @@ def resolve_update_order(outdated_packages, dependency_tree):
         visited.add(package)
         dependencies = dependency_tree.get('dependencies', {}).get(package, {}).get('requires', {})
         for dep in dependencies:
-            if dep in outdated_packages:  # Check if the dependency is also outdated
+            if dep in outdated_packages:
                 visit(dep)
         resolved_order.append(package)
 
@@ -79,43 +104,51 @@ def execute_script_if_exist(project_path, script_name="test"):
         script_exists = script_name in package_data.get("scripts", {})
         returnCode = 0;
         if  script_exists:
-            script_execute = subprocess.run(["npm", "run", script_name], cwd=project_path)
+            script_execute = subprocess.run(["npm", "run", script_name], cwd=project_path, 
+                                          capture_output=QUIET_MODE, text=True)
             returnCode = script_execute.returncode
         else :
             returnCode = 0
-            print(f"No test script found in package.json. Skipping tests.returnCode: {returnCode}")
+            log(f"No test script found in package.json. Skipping tests.returnCode: {returnCode}")
         return returnCode == 0
     except Exception as e:
-        print(f"Error reading package.json: {e}")
+        error_msg = f"Error reading package.json: {e}"
+        print(error_msg)
+        write_log(f"ERROR: {error_msg}")
         return False
 
 def run_tests(project_path):
-    print("\nRunning build...")
+    log("\nRunning build...")
     resultBuild = execute_script_if_exist(project_path, "build")
-    print("\nRunning tests...")
+    log("\nRunning tests...")
     resultTest = execute_script_if_exist(project_path, "test")
     if resultBuild == False or resultTest == False:
-        raise Exception("Tests failed.")
+        error_msg = "Tests failed."
+        write_log(f"ERROR: {error_msg}")
+        raise Exception(error_msg)
 
 def install_package(package, version, project_path):
     """Install a specific package version."""
     try:
-        print(f"\nUpdating {package} to {version}...")
-        subprocess.run(["npm", "install", f"{package}@{version}"], cwd=project_path, check=True)
+        log(f"\nUpdating {package} to {version}...")
+        subprocess.run(["npm", "install", f"{package}@{version}"], cwd=project_path, check=True,
+                      capture_output=QUIET_MODE, text=True)
     except subprocess.CalledProcessError as e:
-        raise Exception(f"Error installing {package}@{version}: {e}")
+        error_msg = f"Error installing {package}@{version}: {e}"
+        write_log(f"ERROR: {error_msg}")
+        raise Exception(error_msg)
     return True
 
 def install_package_and_run_tests(package, version, project_path):
     """Install a specific package version and run tests.""" 
     install_package(package, version, project_path)
     run_tests(project_path)
-    print(f"{package} updated to version {version} successfully.")
+    log(f"{package} updated to version {version} successfully.")
 
 def update_packages_in_order(outdated_packages, dependency_tree, project_path, safe_mode):   
     """Update packages in the resolved order."""
     update_order = resolve_update_order(outdated_packages, dependency_tree)
-    print("\nUpdate Order:", update_order)
+    log("\nUpdate Order: " + ", ".join(update_order))
     
     failed_updates = []
     updated_packages = []
@@ -128,58 +161,65 @@ def update_packages_in_order(outdated_packages, dependency_tree, project_path, s
         final_version = current_version
         
         if safe_mode:
-            print(f"\nTrying to update {package} to latest version {latest_version}...")
+            log(f"\nTrying to update {package} to latest version {latest_version}...")
             try:
                 install_package_and_run_tests(package, latest_version, project_path)
                 final_version = latest_version
+                write_log(f"SUCCESS: Updated {package} from {current_version} to {latest_version}")
             except:
-                print(f"Tests failed. Reverting to wanted version {wanted_version}...")
+                log(f"Tests failed. Reverting to wanted version {wanted_version}...")
                 try:
                     install_package_and_run_tests(package, wanted_version, project_path)
                     final_version = wanted_version
+                    write_log(f"SUCCESS: Updated {package} from {current_version} to {wanted_version}")
                 except:
-                    print(f"Tests failed again. Reverting to current version {current_version}...")
+                    log(f"Tests failed again. Reverting to current version {current_version}...")
                     final_version = current_version
                     install_package_and_run_tests(package, current_version, project_path)
                     failed_updates.append(package)
+                    write_log(f"FAILED: {package} update failed")
         else:
-            if current_version and wanted_version and current_version != wanted_version:
+            if current_version and latest_version and current_version != latest_version:
                 try:
-                    install_package_and_run_tests(package, wanted_version, project_path)
-                    final_version = wanted_version
+                    install_package_and_run_tests(package, latest_version, project_path)
+                    final_version = latest_version
+                    write_log(f"SUCCESS: Updated {package} from {current_version} to {latest_version}")
                 except Exception as e:
+                    error_msg = f"Failed to update {package}: {e}"
+                    write_log(f"ERROR: {error_msg}")
                     failed_updates.append(package)
+                    write_log(f"FAILED: {package} update failed")
             else:
-                print(f"Skipping {package}, already at wanted version or missing version info.")
+                log(f"Skipping {package}, already at latest version or missing version info.")
         
         updated_packages.append((package, current_version, final_version))
     return updated_packages, failed_updates
 
 def print_final_summary(all_updated_packages, all_failed_updates):
     """Print the final summary of updated packages."""
-    print("\nFinal Update Summary:")
-    print("{:<40} {:<10} {:<10}".format("Package", "Old Version", "New Version"))
-    print("-" * 60)
+    log("\nFinal Update Summary:")
+    log("{:<40} {:<10} {:<10}".format("Package", "Old Version", "New Version"))
+    log("-" * 60)
     for pass_num, updated_packages in all_updated_packages:
-        print(f"\n=== Pass {pass_num} ===")
+        log(f"\n=== Pass {pass_num} ===")
         for package, old_version, new_version in updated_packages:
-            print("{:<40} {:<10} {:<10}".format(package, old_version, new_version))
-    print("-" * 60)
+            log("{:<40} {:<10} {:<10}".format(package, old_version, new_version))
+    log("-" * 60)
 
     if all_failed_updates:
-        print("\nPackages that failed to update:")
+        log("\nPackages that failed to update:")
         for package in set(all_failed_updates):
-            print(f"- {package}")
+            log(f"- {package}")
 
 def run_update_process(project_path, safe_mode, passes):
     all_updated_packages = []
     all_failed_updates = []
     
     for i in range(passes):
-        print(f"\n=== Pass {i + 1} ===")
+        log(f"\n=== Pass {i + 1} ===")
         outdated_packages = get_outdated_packages(project_path)
         if not outdated_packages:
-            print("No more outdated packages found.")
+            log("No more outdated packages found.")
             break
         
         dependency_tree = get_dependency_tree(project_path)
@@ -188,27 +228,36 @@ def run_update_process(project_path, safe_mode, passes):
         all_failed_updates.extend(failed_updates)
     
 
-    print("\nRunning final npm audit and build...")
-    subprocess.run(["npm", "audit", "fix"], cwd=project_path)
+    log("\nRunning final npm audit and build...")
+    subprocess.run(["npm", "audit", "fix"], cwd=project_path, capture_output=QUIET_MODE, text=True)
     execute_script_if_exist(project_path, "build")
     print_final_summary(all_updated_packages, all_failed_updates)
 
 def main():
+    global QUIET_MODE
+    
     if len(sys.argv) < 2:
-        print("No project path provided. Using the current directory as the project path.")
+        log("No project path provided. Using the current directory as the project path.")
         project_path = os.getcwd()
     else:
         project_path = sys.argv[1]
     
     safe_mode = "--safe" in sys.argv
+    QUIET_MODE = "--quiet" in sys.argv
     pass_arg = next((arg for arg in sys.argv if arg.startswith("--pass=")), None)
     passes = int(pass_arg.split("=")[1]) if pass_arg else 1
     
+    write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Passes: {passes}, Quiet: {QUIET_MODE}")
+    
     if not os.path.isdir(project_path):
-        print(f"Error: {project_path} is not a valid directory.")
+        error_msg = f"Error: {project_path} is not a valid directory."
+        print(error_msg)
+        write_log(f"ERROR: {error_msg}")
         sys.exit(1)
     
     run_update_process(project_path, safe_mode, passes)
+    write_log(f"PackUpdate completed - Log file: {LOG_FILE}")
+    print(f"Log file created: {LOG_FILE}")
 
 if __name__ == "__main__":
     main()

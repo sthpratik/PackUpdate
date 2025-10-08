@@ -8,6 +8,8 @@ PackUpdate is a Python utility designed to help developers manage and update the
 - **Fallback to Wanted Version**: If issues arise during testing, updates packages to the "wanted" version instead.
 - **Audit Fix**: Automatically resolves audit issues in the project.
 - **Validation**: Runs tests to ensure package updates do not introduce breaking changes.
+- **Comprehensive Logging**: Creates unique timestamped log files for every run.
+- **Quiet Mode**: Runs in background with minimal console output while maintaining full logging.
 
 ## Prerequisites
 
@@ -28,8 +30,15 @@ pip install packupdate
 Run the CLI tool to update Node.js project dependencies:
 
 ```bash
-updatenpmpackages <project_path> [--safe] [--pass=N]
+updatenpmpackages <project_path> [--safe] [--quiet] [--pass=N]
 ```
+
+### Parameters
+
+- `<project_path>`: The path to the Node.js project directory containing `package.json`.
+- `--safe`: Enables safe mode with comprehensive testing and fallback.
+- `--quiet`: Runs in quiet mode, suppressing detailed console output while maintaining full logging.
+- `--pass=N`: Specifies the number of update passes to perform. Default is 1.
 
 ### Examples
 
@@ -43,14 +52,19 @@ updatenpmpackages <project_path> [--safe] [--pass=N]
   updatenpmpackages /path/to/project --safe
   ```
 
+- Quiet Mode:
+  ```bash
+  updatenpmpackages /path/to/project --quiet
+  ```
+
 - Multiple Passes:
   ```bash
   updatenpmpackages /path/to/project --pass=3
   ```
 
-- Safe Mode with Multiple Passes:
+- Combined Parameters:
   ```bash
-  updatenpmpackages /path/to/project --safe --pass=3
+  updatenpmpackages /path/to/project --safe --quiet --pass=2
   ```
 
 ## Run using code
@@ -74,7 +88,7 @@ pip install -r requirements.txt
 To update the packages in your Node.js project, use the following command:
 
 ```bash
-python updatePackages.py <project_path> [--safe] [--pass=N]
+python updatePackages.py <project_path> [--safe] [--quiet] [--pass=N]
 ```
 
 ### 2. Available Commands and Options
@@ -85,6 +99,12 @@ python updatePackages.py <project_path> [--safe] [--pass=N]
   - The script first attempts to update packages to their latest versions.
   - If tests fail, it reverts to the "wanted" version.
   - If tests fail again, it reverts to the current version.
+
+- `--quiet`: **(Optional)** Enables quiet mode:
+  - Suppresses detailed console output and test logs.
+  - Runs npm operations in background.
+  - Only shows critical errors and final log file location.
+  - Full detailed logs are still written to the log file.
 
 - `--pass=N`: **(Optional)** Specifies the number of passes to attempt updating packages. Default is 1.
 
@@ -102,19 +122,33 @@ Run the script in safe mode to ensure updates are validated with tests:
 python updatePackages.py /path/to/project --safe
 ```
 
-#### Example 3: Multiple Passes
+#### Example 3: Quiet Mode
+Run the script in quiet mode for background execution:
+```bash
+python updatePackages.py /path/to/project --quiet
+```
+
+#### Example 4: Multiple Passes
 Run the script with 3 passes to attempt updates multiple times:
 ```bash
 python updatePackages.py /path/to/project --pass=3
 ```
 
-#### Example 4: Safe Mode with Multiple Passes
-Combine safe mode and multiple passes:
+#### Example 5: Combined Options
+Combine safe mode, quiet mode, and multiple passes:
 ```bash
-python updatePackages.py /path/to/project --safe --pass=3
+python updatePackages.py /path/to/project --safe --quiet --pass=3
 ```
 
-### 4. How It Works
+### 4. Logging
+
+- **Automatic Logging**: Every run creates a unique timestamped log file (e.g., `packupdate-2025-10-08T11-35-03-140.log`)
+- **Error Tracking**: All errors are logged with detailed information
+- **Success Tracking**: Successful package updates are recorded with version details
+- **Failed Updates**: Packages that fail to update are tracked and logged
+- **Review**: Log files can be reviewed later for troubleshooting or analysis
+
+### 5. How It Works
 
 1. **Dependency Update**:
    - The script identifies outdated packages using `npm outdated`.
@@ -129,14 +163,18 @@ python updatePackages.py /path/to/project --safe --pass=3
 4. **Build**:
    - After updates, the script runs `npm run build` to ensure the project builds successfully.
 
-### 5. Logs and Output
+5. **Logging**:
+   - All operations are logged to a timestamped file for later review.
+
+### 6. Logs and Output
 
 - The script provides detailed logs during the update process, indicating:
   - Which packages were updated successfully.
   - Which packages were reverted to the "wanted" or current version due to issues.
   - Audit issues that were resolved.
+- In quiet mode, detailed output is suppressed but full logs are maintained in the log file.
 
-### 6. Rollback
+### 7. Rollback
 
 If you encounter issues after running the script, you can manually revert to a previous state using your version control system (e.g., Git).
 
@@ -145,9 +183,9 @@ If you encounter issues after running the script, you can manually revert to a p
 1. Ensure your project has a valid `package.json` and `package-lock.json`.
 2. Run the script:
    ```bash
-   python updatePackages.py /path/to/project --safe --pass=2
+   python updatePackages.py /path/to/project --safe --quiet --pass=2
    ```
-3. Review the logs to confirm updates and audit fixes.
+3. Review the generated log file to confirm updates and audit fixes.
 4. Run your application to verify everything works as expected.
 
 ## Publishing to PyPI
@@ -203,5 +241,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Support
 
 If you encounter any issues or have questions, feel free to open an issue in the repository.
-
 

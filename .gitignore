@@ -157,6 +157,25 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Log files
+logs/
+*.log
+
+# Node.js
+node_modules/
+npm-debug.log*
+.npm
+
+# Compiled files
+dist/
+*.js
+*.js.map
+*.tsbuildinfo
+
+# Test files
+test-project/
+simple-test/
+
 # pytype static type analyzer
 .pytype/
 

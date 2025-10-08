@@ -1,6 +1,6 @@
 {
   "name": "updatenpmpackages",
-  "version": "0.1.3",
+  "version": "0.1.6",
   "description": "A Node.js package to automate updating npm packages with dependency resolution and testing.",
   "main": "dist/updatePackages.js",
   "types": "dist/updatePackages.d.ts",
@@ -8,9 +8,8 @@
     "updatenpmpackages": "dist/updatePackages.js"
   },
   "scripts": {
-    "build": "npm run clean && tsc && npm run copy-files",
+    "build": "npm run clean && tsc",
     "dev": "npm run build && npm run start",
-    "copy-files": "cp -a ./src/* ./dist/",
     "clean": "rm -rf dist",
     "start": "node dist/updatePackages.js --safe --pass=2",
     "test": "echo \"No tests specified\" && exit 0",
@@ -27,7 +26,7 @@
   "author": "Manish Shrestha",
   "license": "ISC",
   "devDependencies": {
-    "@types/node": "^22.14.1",
+    "@types/node": "^22.18.8",
     "typescript": "^5.0.0"
   },
   "dependencies": {
