@@ -1,16 +1,32 @@
 {
   "name": "packupdate-mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for PackUpdate package management",
+  "description": "MCP server for PackUpdate - automated package updates with progress logging",
   "main": "index.js",
   "type": "module",
+  "bin": {
+    "packupdate-mcp": "./index.js"
+  },
   "scripts": {
     "start": "node index.js"
   },
+  "keywords": ["mcp", "packupdate", "package-manager", "npm", "updates", "q-cli", "progress-logging"],
+  "author": "Manish Shrestha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sthpratik/PackUpdate.git",
+    "directory": "mcp-server"
+  },
+  "homepage": "https://sthpratik.github.io/PackUpdate/#/./mcp-server",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.5.0"
   },
-  "keywords": ["mcp", "package-update", "npm", "python"],
-  "author": "Manish Shrestha",
-  "license": "MIT"
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "index.js",
+    "README.md"
+  ]
 }

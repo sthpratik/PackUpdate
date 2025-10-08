@@ -8,100 +8,101 @@ An MCP (Model Context Protocol) server that provides tools for updating Node.js 
 - **get_packupdate_version**: Check installed PackUpdate package versions
 - **get_update_logs**: Retrieve and return the latest PackUpdate log file contents
 - **list_outdated_packages**: Preview outdated packages without updating them
+- **Progress logging**: Real-time status updates visible in Q CLI logs
+- **Configurable timeouts**: Shorter timeouts to avoid long waits
+- **Verbose mode**: Detailed logging via environment variables
 
 ## Installation
 
-1. Install dependencies:
+### Option 1: NPM Package (Recommended)
+
 ```bash
+# Install globally
+npm install -g packupdate-mcp-server
+
+# Or install locally
+npm install packupdate-mcp-server
+```
+
+### Option 2: Clone Repository
+
+```bash
+git clone https://github.com/sthpratik/PackUpdate.git
+cd PackUpdate/mcp-server
 npm install
 ```
 
-2. Make sure PackUpdate packages are installed:
-```bash
-# For Node.js version
-npm install -g updatenpmpackages
+## Quick Configuration
 
-# For Python version  
-pip install packupdate
+### For NPM Installation
+
+Add to `~/.aws/amazonq/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "packupdate": {
+      "command": "packupdate-mcp",
+      "env": {
+        "PACKUPDATE_VERBOSE": "true"
+      }
+    }
+  }
+}
 ```
 
-## Usage
+### For Local Installation
 
-### Running the MCP Server
-
-```bash
-npm start
-```
-
-### Available Tools
-
-#### update_packages
-Updates packages with auto-detection or specified package manager.
-
-**Parameters:**
-- `project_path` (required): Path to the project
-- `package_manager` (optional): "nodejs", "python", or "auto" (default: "auto")
-- `safe_mode` (optional): Enable safe mode (default: false)
-- `quiet_mode` (optional): Enable quiet mode (default: false)  
-- `passes` (optional): Number of update passes (default: 1)
-
-#### get_packupdate_version
-Check installed PackUpdate package versions.
-
-**Parameters:**
-- `package_manager` (optional): "nodejs", "python", or "both" (default: "both")
-
-#### get_update_logs
-Retrieves the latest PackUpdate log file contents.
-
-**Parameters:**
-- `project_path` (required): Path to the project to find logs
-
-#### list_outdated_packages
-Lists outdated packages without updating them.
-
-**Parameters:**
-- `project_path` (required): Path to the project
-
-## Integration with Q CLI
-
-Add this server to your Q CLI configuration:
+Add to `~/.aws/amazonq/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "packupdate": {
       "command": "node",
-      "args": ["index.js"],
-      "cwd": "/path/to/PackUpdate/mcp-server"
+      "args": ["/absolute/path/to/PackUpdate/mcp-server/index.js"],
+      "cwd": "/absolute/path/to/PackUpdate/mcp-server",
+      "env": {
+        "PACKUPDATE_VERBOSE": "true"
+      }
     }
   }
 }
 ```
 
-## Example Usage
+## Documentation
 
-```javascript
-// Auto-detect and update packages
-await callTool("update_packages", {
-  project_path: "/path/to/my-project",
-  safe_mode: true
-});
+📖 **Complete documentation available at:** https://sthpratik.github.io/PackUpdate/#/
 
-// Force use Node.js version
-await callTool("update_packages", {
-  project_path: "/path/to/my-project",
-  package_manager: "nodejs",
-  quiet_mode: true
-});
+### Key Documentation Pages:
 
-// Check versions
-await callTool("get_packupdate_version", {
-  package_manager: "both"
-});
+- **[MCP Server Setup](https://sthpratik.github.io/PackUpdate/#/./mcp-server)** - Complete MCP server documentation
+- **[Q CLI Integration](https://sthpratik.github.io/PackUpdate/#/./mcp-integration)** - Step-by-step Q CLI setup with progress logging
+- **[Progress Logging Guide](https://sthpratik.github.io/PackUpdate/#/./mcp-progress-logging)** - Implementation guide for MCP developers
 
-// Check outdated packages first
-await callTool("list_outdated_packages", {
-  project_path: "/path/to/my-project"
-});
+## Enable Progress Logging
+
+```bash
+# Method 1: PackUpdate-specific verbose mode
+PACKUPDATE_VERBOSE=true q chat
+
+# Method 2: Q CLI trace logging (all MCP servers)
+Q_LOG_LEVEL=trace q chat
 ```
+
+## Requirements
+
+- Node.js 18+ and npm
+- PackUpdate packages: `npm install -g updatenpmpackages`
+- Amazon Q CLI with MCP support
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. **Check the [Q CLI Integration Guide](https://sthpratik.github.io/PackUpdate/#/./mcp-integration)** for detailed setup
+2. **Enable verbose logging** to see real-time progress
+3. **Verify PackUpdate installation**: `updatenpmpackages --version`
+4. **Check MCP server status**: Use `/mcp` command in Q CLI
+
+For complete troubleshooting steps, see the [full documentation](https://sthpratik.github.io/PackUpdate/#/./mcp-integration?id=troubleshooting).
