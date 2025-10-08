@@ -22,6 +22,17 @@ PackUpdate is also available as a Python package. It provides similar functional
 
 For detailed instructions, visit the [Python Package README](https://sthpratik.github.io/PackUpdate/#/./python).
 
+### MCP Server
+PackUpdate includes an MCP (Model Context Protocol) server that allows AI assistants to update packages automatically.
+
+For setup and usage instructions, visit the [MCP Server Documentation](https://sthpratik.github.io/PackUpdate/#/./mcp-server).
+
+## Architecture
+
+PackUpdate features a modular architecture with comprehensive safety mechanisms and AI integration capabilities.
+
+For detailed architectural diagrams and system design, visit the [Architecture Documentation](https://sthpratik.github.io/PackUpdate/#/./architecture).
+
 ## New Features
 
 ### Logging

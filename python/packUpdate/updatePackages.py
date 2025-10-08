@@ -233,19 +233,68 @@ def run_update_process(project_path, safe_mode, passes):
     execute_script_if_exist(project_path, "build")
     print_final_summary(all_updated_packages, all_failed_updates)
 
+def show_help():
+    """Display help message with all available parameters."""
+    print("""
+PackUpdate - Python Package Updater
+
+Usage: updatenpmpackages [project_path] [options]
+
+Arguments:
+  project_path              Path to the Node.js project (default: current directory)
+
+Options:
+  --safe                   Enable safe mode (test updates before applying)
+  --quiet                  Enable quiet mode (minimal console output)
+  --pass=<number>          Number of update passes (default: 1)
+  --version                Show package version
+  --type                   Show package type (python)
+  --help                   Show this help message
+
+Examples:
+  updatenpmpackages                           # Update current directory
+  updatenpmpackages /path/to/project         # Update specific project
+  updatenpmpackages --safe --quiet           # Safe and quiet mode
+  updatenpmpackages --pass=3                 # Multiple passes
+  updatenpmpackages --version                # Show version
+""")
+
 def main():
     global QUIET_MODE
     
-    if len(sys.argv) < 2:
-        log("No project path provided. Using the current directory as the project path.")
-        project_path = os.getcwd()
-    else:
-        project_path = sys.argv[1]
+    # Filter out flags to get the project path
+    args = sys.argv[1:]
+    flags = [arg for arg in args if arg.startswith('--')]
+    non_flags = [arg for arg in args if not arg.startswith('--')]
     
-    safe_mode = "--safe" in sys.argv
-    QUIET_MODE = "--quiet" in sys.argv
-    pass_arg = next((arg for arg in sys.argv if arg.startswith("--pass=")), None)
+    project_path = non_flags[0] if non_flags else os.getcwd()
+    safe_mode = "--safe" in flags
+    QUIET_MODE = "--quiet" in flags
+    show_version = "--version" in flags
+    show_type = "--type" in flags
+    show_help_flag = "--help" in flags
+    pass_arg = next((arg for arg in flags if arg.startswith("--pass=")), None)
     passes = int(pass_arg.split("=")[1]) if pass_arg else 1
+    
+    # Handle help flag
+    if show_help_flag:
+        show_help()
+        return
+    
+    # Handle version flag
+    if show_version:
+        import pkg_resources
+        try:
+            version = pkg_resources.get_distribution("packupdate").version
+            print(version)
+        except:
+            print("Unknown")
+        return
+    
+    # Handle type flag
+    if show_type:
+        print("python")
+        return
     
     write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Passes: {passes}, Quiet: {QUIET_MODE}")
     

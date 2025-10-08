@@ -236,12 +236,65 @@ const printFinalSummary = (allResults: UpdateResult[], passes: number): void => 
   }
 };
 
+const showHelp = (): void => {
+  console.log(`
+PackUpdate - Node.js Package Updater
+
+Usage: updatenpmpackages [project_path] [options]
+
+Arguments:
+  project_path              Path to the Node.js project (default: current directory)
+
+Options:
+  --safe                   Enable safe mode (test updates before applying)
+  --quiet                  Enable quiet mode (minimal console output)
+  --pass=<number>          Number of update passes (default: 1)
+  --version                Show package version
+  --type                   Show package type (nodejs)
+  --help                   Show this help message
+
+Examples:
+  updatenpmpackages                           # Update current directory
+  updatenpmpackages /path/to/project         # Update specific project
+  updatenpmpackages --safe --quiet           # Safe and quiet mode
+  updatenpmpackages --pass=3                 # Multiple passes
+  updatenpmpackages --version                # Show version
+`);
+};
+
 const main = (): void => {
-  const projectPath = process.argv[2] || process.cwd();
-  const safeMode = process.argv.includes("--safe");
-  QUIET_MODE = process.argv.includes("--quiet");
-  const passArg = process.argv.find((arg) => arg.startsWith("--pass="));
+  // Filter out flags to get the project path
+  const args = process.argv.slice(2);
+  const flags = args.filter(arg => arg.startsWith('--'));
+  const nonFlags = args.filter(arg => !arg.startsWith('--'));
+  
+  const projectPath = nonFlags[0] || process.cwd();
+  const safeMode = flags.includes("--safe");
+  QUIET_MODE = flags.includes("--quiet");
+  const showVersion = flags.includes("--version");
+  const showType = flags.includes("--type");
+  const showHelpFlag = flags.includes("--help");
+  const passArg = flags.find((arg) => arg.startsWith("--pass="));
   const passes = passArg ? parseInt(passArg.split("=")[1], 10) : 1;
+
+  // Handle help flag
+  if (showHelpFlag) {
+    showHelp();
+    return;
+  }
+
+  // Handle version flag
+  if (showVersion) {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf-8"));
+    console.log(packageJson.version);
+    return;
+  }
+
+  // Handle type flag
+  if (showType) {
+    console.log("nodejs");
+    return;
+  }
 
   writeLog(`PackUpdate started - Project: ${projectPath}, Safe Mode: ${safeMode}, Passes: ${passes}, Quiet: ${QUIET_MODE}`);
 

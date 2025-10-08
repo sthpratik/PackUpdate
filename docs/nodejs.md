@@ -40,7 +40,12 @@ updatenpmpackages is a personal project designed to streamline and manage packag
 - `--safe`: Runs the updates in safe mode, ensuring tests are executed after each update.
 - `--quiet`: Runs in quiet mode, suppressing detailed console output while maintaining full logging.
 - `--pass=<number>`: Specifies the number of update passes to perform. Defaults to 1.
+- `--version`: Shows the current version of the package.
+- `--type`: Shows the package type (nodejs).
+- `--help`: Shows help message with all available parameters.
 - `<projectPath>`: Optional. Specifies the path to the project. Defaults to the current working directory.
+
+**Note:** Parameters can be specified in any order. If no project path is provided, the current directory is used.
 
 ### Examples
 #### Basic Usage
@@ -79,6 +84,24 @@ To update a specific project:
 updatenpmpackages /path/to/your/project --quiet
 ```
 
+#### Check Version
+To check the current version:
+```bash
+updatenpmpackages --version
+```
+
+#### Check Package Type
+To check the package type:
+```bash
+updatenpmpackages --type
+```
+
+#### Show Help
+To see all available options:
+```bash
+updatenpmpackages --help
+```
+
 ### Logging
 - **Automatic Logging**: Every run creates a unique timestamped log file (e.g., `packupdate-2025-10-08T11-35-03-140Z.log`)
 - **Error Tracking**: All errors are logged with detailed information
@@ -93,6 +116,19 @@ updatenpmpackages /path/to/your/project --quiet
 4. **Run Tests**: If in safe mode, the tool runs `npm run build` and `npm test` after each update.
 5. **Logging**: All operations are logged to a timestamped file for later review.
 6. **Summary**: A final summary is displayed, showing updated packages and any failures.
+
+## Local Development
+
+For testing local changes without publishing:
+
+```bash
+cd PackUpdate/node
+npm run build
+npm link
+updatenpmpackages --version  # Test your changes
+```
+
+For detailed local development instructions, see [Local Development Guide](./local-development.md).
 
 ## Contributing
 Contributions are welcome! Please fork the repository and submit a pull request.

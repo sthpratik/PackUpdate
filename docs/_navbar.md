@@ -1,5 +1,8 @@
 - [Home](README.md)
 - [Node.js Package](./nodejs.md)
 - [Python Package](./python.md)
+- [MCP Server](./mcp-server.md)
+- [Architecture](./architecture.md)
+- [Local Development](./local-development.md)
 - [Contributing](./README.md#contributing)
 - [License](./README.md#license)

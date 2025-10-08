@@ -93,7 +93,7 @@ python updatePackages.py <project_path> [--safe] [--quiet] [--pass=N]
 
 ### 2. Available Commands and Options
 
-- `<project_path>`: **(Required)** The path to the Node.js project directory containing `package.json` and `package-lock.json`.
+- `<project_path>`: **(Optional)** The path to the Node.js project directory containing `package.json` and `package-lock.json`. If not provided, uses the current directory.
 
 - `--safe`: **(Optional)** Enables safe mode. In this mode:
   - The script first attempts to update packages to their latest versions.
@@ -106,7 +106,15 @@ python updatePackages.py <project_path> [--safe] [--quiet] [--pass=N]
   - Only shows critical errors and final log file location.
   - Full detailed logs are still written to the log file.
 
+- `--version`: **(Optional)** Shows the current version of the package.
+
+- `--type`: **(Optional)** Shows the package type (python).
+
+- `--help`: **(Optional)** Shows help message with all available parameters.
+
 - `--pass=N`: **(Optional)** Specifies the number of passes to attempt updating packages. Default is 1.
+
+**Note:** Parameters can be specified in any order. If no project path is provided, the current directory is used.
 
 ### 3. Examples
 
@@ -138,6 +146,24 @@ python updatePackages.py /path/to/project --pass=3
 Combine safe mode, quiet mode, and multiple passes:
 ```bash
 python updatePackages.py /path/to/project --safe --quiet --pass=3
+```
+
+#### Example 6: Check Version
+Check the current version:
+```bash
+python updatePackages.py --version
+```
+
+#### Example 7: Check Package Type
+Check the package type:
+```bash
+python updatePackages.py --type
+```
+
+#### Example 8: Show Help
+Show all available options:
+```bash
+python updatePackages.py --help
 ```
 
 ### 4. Logging
@@ -187,6 +213,18 @@ If you encounter issues after running the script, you can manually revert to a p
    ```
 3. Review the generated log file to confirm updates and audit fixes.
 4. Run your application to verify everything works as expected.
+
+## Local Development
+
+For testing local changes without publishing:
+
+```bash
+cd PackUpdate/python
+pip install -e .
+updatenpmpackages --version  # Test your changes
+```
+
+For detailed local development instructions, see [Local Development Guide](./local-development.md).
 
 ## Publishing to PyPI
 

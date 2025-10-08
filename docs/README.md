@@ -8,6 +8,11 @@ PackUpdate is a versatile tool designed to streamline and manage package updates
 PackUpdate is available as:
 - A **Node.js package** (`updatenpmpackages`) for managing Node.js project dependencies.
 - A **Python package** for similar functionality using Python.
+- An **MCP Server** for AI assistant integration and automated package management.
+
+## Architecture
+
+PackUpdate features a modular architecture with comprehensive safety mechanisms and AI integration capabilities. View detailed [architectural diagrams and system design](./architecture.md).
 
 ## Features
 - Easy package management.
