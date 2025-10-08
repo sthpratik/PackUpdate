@@ -2,8 +2,8 @@
   "mcpServers": {
     "packupdate": {
       "command": "node",
-      "args": ["index.js"],
-      "cwd": ".",
+      "args": ["~/Documents/Apps/PackUpdate/mcp-server/index.js"],
+      "cwd": "~/Documents/Apps/PackUpdate/mcp-server",
       "env": {}
     }
   }
