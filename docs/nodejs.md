@@ -1,137 +1,150 @@
-# updatenpmpackages
+# Node.js Package - updatenpmpackages
 
-updatenpmpackages is a personal project designed to streamline and manage package updates efficiently.
+## Overview
+
+`updatenpmpackages` is a comprehensive Node.js package that automates the process of updating outdated npm packages with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
 
 ## Features
-- Easy package management.
-- Automated update checks.
-- User-friendly interface.
-- Safe mode for testing updates before applying them.
-- Comprehensive logging with unique timestamped log files.
-- Quiet mode for background execution.
+
+### 🚀 Core Update Features
+- **Smart Update Algorithm**: Latest → Wanted → Revert strategy with automatic rollback
+- **Safe Mode**: Test builds and tests after each update
+- **Dependency Resolution**: Updates packages in correct dependency order
+- **Multiple Passes**: Configurable number of update attempts
+
+### 🔍 Intelligence & Analysis
+- **Breaking Change Detection**: Automatic risk assessment for major version updates
+- **Safe Package Prioritization**: Low-risk packages updated first
+- **Security Analysis**: Vulnerability detection and reporting
+- **Dependency Intelligence**: Circular dependency detection and analysis
+
+### 🧹 Maintenance & Cleanup
+- **Remove Unused Dependencies**: Intelligent unused package detection with depcheck
+- **Deduplicate Packages**: Optimize node_modules with npm dedupe
+- **Package Optimization**: Reduce bundle size and complexity
+
+### 📊 Comprehensive Reporting
+- **Security & Dependency Reports**: Detailed JSON and console reports
+- **Breaking Change Analysis**: Risk assessment with actionable recommendations
+- **Vulnerability Scanning**: CVE detection with severity levels
+- **Update Statistics**: Success/failure tracking with detailed logs
+
+### 📝 Advanced Logging
+- **Dual Log System**: Summary and detailed logs
+- **Complete Output Capture**: Full npm command output preservation
+- **Quiet Mode**: Automation-friendly minimal output
+- **Audit Trails**: Complete operation history
 
 ## Installation
-### As a Standalone Application - [Documentation](https://sthpratik.github.io/PackUpdate/#/)
-1. Clone the repository: [Github](https://github.com/sthpratik/PackUpdate)
-   ```bash
-   git clone https://github.com/sthpratik/PackUpdate
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd PackUpdate/node
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
 
-### As a Global Package 
-1. Install `updatenpmpackages` globally via npm:
-   ```bash
-   npm install -g updatenpmpackages
-   ```
-2. Run `updatenpmpackages` to update the node packages of your app:
-   ```bash
-   updatenpmpackages
-   ```
+### Global Installation
+```bash
+npm install -g updatenpmpackages
+```
+
+### Local Development
+```bash
+# Clone and build
+git clone <repository>
+cd node
+npm install
+npm run build
+
+# Link for global use
+npm link
+```
 
 ## Usage
-### Parameters
-- `--safe`: Runs the updates in safe mode, ensuring tests are executed after each update.
-- `--quiet`: Runs in quiet mode, suppressing detailed console output while maintaining full logging.
-- `--pass=<number>`: Specifies the number of update passes to perform. Defaults to 1.
-- `--version`: Shows the current version of the package.
-- `--type`: Shows the package type (nodejs).
-- `--help`: Shows help message with all available parameters.
-- `<projectPath>`: Optional. Specifies the path to the project. Defaults to the current working directory.
 
-**Note:** Parameters can be specified in any order. If no project path is provided, the current directory is used.
+### Basic Commands
 
-### Examples
-#### Basic Usage
-Navigate to your project directory and run:
 ```bash
+# Update packages in current directory
 updatenpmpackages
-```
 
-#### Safe Mode
-To run updates in safe mode:
-```bash
+# Update specific project
+updatenpmpackages /path/to/project
+
+# Safe mode with testing
 updatenpmpackages --safe
-```
 
-#### Quiet Mode
-To run in background with minimal console output:
-```bash
+# Quiet mode for automation
 updatenpmpackages --quiet
 ```
 
-#### Multiple Passes
-To perform multiple update passes:
+### Version-Specific Updates
+
 ```bash
+# Update only minor versions (safer)
+updatenpmpackages --minor-only
+
+# Multiple update passes
 updatenpmpackages --pass=3
+
+# Combined safe minor updates
+updatenpmpackages --safe --minor-only
 ```
 
-#### Combined Parameters
-To run in safe mode with quiet output and multiple passes:
-```bash
-updatenpmpackages --safe --quiet --pass=2
-```
-
-#### Specify Project Path
-To update a specific project:
-```bash
-updatenpmpackages /path/to/your/project --quiet
-```
-
-#### Check Version
-To check the current version:
-```bash
-updatenpmpackages --version
-```
-
-#### Check Package Type
-To check the package type:
-```bash
-updatenpmpackages --type
-```
-
-#### Show Help
-To see all available options:
-```bash
-updatenpmpackages --help
-```
-
-### Logging
-- **Automatic Logging**: Every run creates a unique timestamped log file (e.g., `packupdate-2025-10-08T11-35-03-140Z.log`)
-- **Error Tracking**: All errors are logged with detailed information
-- **Success Tracking**: Successful package updates are recorded with version details
-- **Failed Updates**: Packages that fail to update are tracked and logged
-- **Review**: Log files can be reviewed later for troubleshooting or analysis
-
-### Detailed Workflow
-1. **Check for Outdated Packages**: The tool uses `npm outdated` to identify outdated packages.
-2. **Resolve Update Order**: Dependencies are resolved to ensure updates occur in the correct order.
-3. **Update Packages**: Packages are updated to the latest or wanted versions based on the mode.
-4. **Run Tests**: If in safe mode, the tool runs `npm run build` and `npm test` after each update.
-5. **Logging**: All operations are logged to a timestamped file for later review.
-6. **Summary**: A final summary is displayed, showing updated packages and any failures.
-
-## Local Development
-
-For testing local changes without publishing:
+### Analysis & Reporting
 
 ```bash
-cd PackUpdate/node
-npm run build
-npm link
-updatenpmpackages --version  # Test your changes
+# Generate comprehensive report (no updates)
+updatenpmpackages --generate-report
+
+# Report with specific project
+updatenpmpackages /path/to/project --generate-report
+
+# Quiet report generation
+updatenpmpackages --generate-report --quiet
 ```
 
-For detailed local development instructions, see [Local Development Guide](./local-development.md).
+### Cleanup Operations
 
-## Contributing
-Contributions are welcome! Please fork the repository and submit a pull request.
+```bash
+# Remove unused dependencies
+updatenpmpackages --remove-unused
 
-## License
-This project is licensed under the MIT License.
+# Deduplicate packages
+updatenpmpackages --dedupe-packages
+
+# Combined cleanup
+updatenpmpackages --remove-unused --dedupe-packages
+```
+
+## Command Line Options
+
+### Core Options
+- `--safe` - Enable safe mode (test updates before applying)
+- `--quiet` - Enable quiet mode (minimal console output)
+- `--pass=<number>` - Number of update passes (default: 1)
+
+### Update Control
+- `--minor-only` - Update only minor versions (1.2.x → 1.3.x, skip major updates)
+
+### Analysis & Reporting
+- `--generate-report` - Generate comprehensive security & dependency report (no updates)
+
+### Cleanup & Maintenance
+- `--remove-unused` - Clean up unused dependencies
+- `--dedupe-packages` - Remove duplicate dependencies
+
+### Information
+- `--version` - Show package version
+- `--type` - Show package type (nodejs)
+- `--help` - Show help message
+
+## Smart Update Algorithm
+
+### Safe Mode Process
+1. **Try Latest Version** → Install → Run Tests
+2. **If Fails, Try Wanted Version** → Install → Run Tests
+3. **If Fails, Revert to Current** → Install → Run Tests
+4. **Only Mark as Updated** if newer version works
+
+### Breaking Change Detection
+- **Major Version Analysis**: Detects 1.x.x → 2.x.x changes
+- **Risk Assessment**: Categorizes packages as safe or risky
+- **Peer Dependency Check**: Validates compatibility
+- **Safe-First Updates**: Prioritizes low-risk packages
+
+This comprehensive Node.js package provides enterprise-grade dependency management with safety, intelligence, and automation capabilities.

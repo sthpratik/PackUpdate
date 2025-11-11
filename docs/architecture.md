@@ -1,312 +1,287 @@
 # PackUpdate Architecture
 
-This document provides architectural diagrams showing how PackUpdate works internally and how it integrates with AI assistants through the MCP server.
+## Overview
 
-## System Architecture Overview
+PackUpdate features a **modular, KISS-compliant architecture** with comprehensive safety mechanisms, AI integration capabilities, and intelligent package management features.
 
-```mermaid
-graph TB
-    subgraph "PackUpdate Ecosystem"
-        A[User/AI Assistant] --> B{Package Manager Choice}
-        B -->|Global Install| C[Node.js Package<br/>updatenpmpackages]
-        B -->|Pip Install| D[Python Package<br/>packupdate]
-        B -->|MCP Integration| E[MCP Server]
-        
-        C --> F[npm outdated]
-        D --> F
-        E --> C
-        E --> D
-        
-        F --> G[Dependency Resolution]
-        G --> H[Package Installation]
-        H --> I[Testing & Validation]
-        I --> J[Logging System]
-        
-        J --> K[Log Files<br/>logs/packupdate-*.log]
-    end
-    
-    subgraph "External Dependencies"
-        L[npm Registry]
-        M[Node.js Project]
-        N[package.json]
-        O[Test Scripts]
-    end
-    
-    H --> L
-    F --> N
-    I --> O
-    H --> M
+## Core Principles
+
+### KISS Architecture
+- **Single Responsibility**: Each module has one clear purpose
+- **Modular Design**: Large functions broken into focused, testable modules
+- **Clear Dependencies**: Import structure shows module relationships
+- **Easy Debugging**: Issues can be isolated to specific modules
+
+### Safety-First Approach
+- **Smart Update Algorithm**: Latest → Wanted → Revert strategy
+- **Breaking Change Detection**: Automatic risk assessment
+- **Safe Package Prioritization**: Low-risk updates first
+- **Comprehensive Testing**: Build and test validation after each update
+
+## Node.js Architecture
+
+### Directory Structure
 ```
-
-## Package Update Flow
-
-```mermaid
-flowchart TD
-    A[Start PackUpdate] --> B[Parse Arguments]
-    B --> C{Check Flags}
-    C -->|--version| D[Show Version]
-    C -->|--type| E[Show Type]
-    C -->|--help| F[Show Help]
-    C -->|Update Mode| G[Validate Project Path]
-    
-    G --> H[Run npm outdated --json]
-    H --> I{Packages Found?}
-    I -->|No| J[No Updates Needed]
-    I -->|Yes| K[Parse Outdated Packages]
-    
-    K --> L[Get Dependency Tree]
-    L --> M[Resolve Update Order]
-    M --> N[Start Update Loop]
-    
-    N --> O[Select Next Package]
-    O --> P{Safe Mode?}
-    P -->|Yes| Q[Install Latest Version]
-    P -->|No| R[Install Wanted Version]
-    
-    Q --> S[Run Tests]
-    S --> T{Tests Pass?}
-    T -->|Yes| U[Log Success]
-    T -->|No| V[Revert & Try Wanted]
-    V --> W{Tests Pass?}
-    W -->|Yes| U
-    W -->|No| X[Revert & Log Failure]
-    
-    R --> Y[Run Tests if Available]
-    Y --> Z{Tests Pass?}
-    Z -->|Yes| U
-    Z -->|No| X
-    
-    U --> AA{More Packages?}
-    X --> AA
-    AA -->|Yes| O
-    AA -->|No| BB[Generate Summary]
-    BB --> CC[Write Final Logs]
-    CC --> DD[End]
-    
-    D --> DD
-    E --> DD
-    F --> DD
-    J --> DD
+src/
+├── types.ts                    # Centralized type definitions
+├── updatePackages.ts          # Main entry point (70 lines)
+├── utils/                     # Utility modules
+│   ├── logger.ts             # Dual logging system (summary + detailed)
+│   ├── version.ts            # Version comparison utilities
+│   └── cli.ts               # CLI argument parsing & help
+└── services/                 # Business logic modules
+    ├── packageService.ts     # NPM operations & package management
+    ├── dependencyService.ts  # Dependency analysis & resolution
+    ├── testService.ts       # Test & build execution
+    ├── reportService.ts     # Security & dependency reporting
+    ├── updateService.ts     # Update orchestration & smart algorithms
+    └── cleanupService.ts    # Package cleanup & optimization
 ```
-
-## Dependency Resolution Algorithm
-
-```mermaid
-graph TD
-    A[Outdated Packages List] --> B[Build Dependency Graph]
-    B --> C[Initialize Visited Set]
-    C --> D[Start DFS Traversal]
-    
-    D --> E[Visit Package]
-    E --> F{Already Visited?}
-    F -->|Yes| G[Skip Package]
-    F -->|No| H[Mark as Visited]
-    
-    H --> I[Get Package Dependencies]
-    I --> J{Has Outdated Dependencies?}
-    J -->|Yes| K[Visit Dependencies First]
-    J -->|No| L[Add to Update Order]
-    
-    K --> E
-    G --> M{More Packages?}
-    L --> M
-    M -->|Yes| N[Next Package]
-    M -->|No| O[Return Ordered List]
-    
-    N --> E
-    O --> P[Execute Updates in Order]
-```
-
-## MCP Server Integration Architecture
-
-```mermaid
-graph TB
-    subgraph "AI Assistant (Q CLI)"
-        A[User Query] --> B[Natural Language Processing]
-        B --> C[Intent Recognition]
-        C --> D[MCP Client]
-    end
-    
-    subgraph "MCP Protocol Layer"
-        D --> E[JSON-RPC 2.0]
-        E --> F[Tool Discovery]
-        E --> G[Tool Execution]
-    end
-    
-    subgraph "PackUpdate MCP Server"
-        F --> H[List Available Tools]
-        G --> I{Tool Selection}
-        
-        I -->|update_packages| J[Package Update Tool]
-        I -->|get_packupdate_version| K[Version Check Tool]
-        I -->|get_update_logs| L[Log Retrieval Tool]
-        I -->|list_outdated_packages| M[Package List Tool]
-    end
-    
-    subgraph "PackUpdate Core"
-        J --> N[Auto-detect Project Type]
-        N --> O{Project Type}
-        O -->|Node.js| P[Call updatenpmpackages]
-        O -->|Python| Q[Call packupdate]
-        
-        K --> R[Check Installed Versions]
-        L --> S[Read Log Files]
-        M --> T[Run npm outdated]
-    end
-    
-    subgraph "File System"
-        P --> U[Execute npm commands]
-        Q --> U
-        S --> V[logs/*.log files]
-        T --> W[package.json]
-    end
-    
-    subgraph "Response Flow"
-        U --> X[Capture Output]
-        V --> X
-        W --> X
-        R --> X
-        X --> Y[Format Response]
-        Y --> Z[Return to AI Assistant]
-    end
-```
-
-## MCP Communication Flow
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant AI as AI Assistant (Q CLI)
-    participant MCP as MCP Client
-    participant Server as MCP Server
-    participant Core as PackUpdate Core
-    participant NPM as npm/filesystem
-    
-    User->>AI: "Update packages in my project"
-    AI->>MCP: Parse intent & identify tools needed
-    MCP->>Server: tools/list (discover available tools)
-    Server->>MCP: Return tool definitions
-    
-    MCP->>Server: tools/call update_packages
-    Note over MCP,Server: {project_path: "/path", safe_mode: true}
-    
-    Server->>Core: Detect project type
-    Core->>NPM: Check package.json
-    NPM->>Core: Project type confirmed
-    
-    Server->>Core: Execute updatenpmpackages
-    Core->>NPM: npm outdated --json
-    NPM->>Core: Outdated packages list
-    
-    Core->>NPM: npm install package@version
-    NPM->>Core: Installation result
-    
-    Core->>NPM: npm test (if safe mode)
-    NPM->>Core: Test results
-    
-    Core->>NPM: Write logs
-    NPM->>Core: Log file created
-    
-    Core->>Server: Return execution results
-    Server->>MCP: Formatted response with logs
-    MCP->>AI: Tool execution complete
-    AI->>User: "Packages updated successfully. Log: ..."
-```
-
-## Data Flow Diagram
-
-```mermaid
-graph LR
-    subgraph "Input Data"
-        A[Project Path]
-        B[CLI Arguments]
-        C[package.json]
-    end
-    
-    subgraph "Processing"
-        D[Argument Parser]
-        E[Project Validator]
-        F[Package Scanner]
-        G[Dependency Resolver]
-        H[Update Engine]
-        I[Test Runner]
-        J[Logger]
-    end
-    
-    subgraph "Output Data"
-        K[Updated Packages]
-        L[Log Files]
-        M[Console Output]
-        N[Exit Code]
-    end
-    
-    A --> E
-    B --> D
-    C --> F
-    
-    D --> H
-    E --> F
-    F --> G
-    G --> H
-    H --> I
-    I --> J
-    
-    H --> K
-    J --> L
-    J --> M
-    I --> N
-```
-
-## Error Handling Flow
-
-```mermaid
-graph TD
-    A[Operation Start] --> B{Try Operation}
-    B -->|Success| C[Log Success]
-    B -->|Error| D[Catch Exception]
-    
-    D --> E{Error Type}
-    E -->|Network Error| F[Retry Logic]
-    E -->|Permission Error| G[Log Error & Skip]
-    E -->|Test Failure| H[Revert Package]
-    E -->|Invalid Path| I[Exit with Error]
-    
-    F --> J{Retry Count < Max?}
-    J -->|Yes| K[Wait & Retry]
-    J -->|No| G
-    K --> B
-    
-    H --> L[Install Previous Version]
-    L --> M[Log Revert Action]
-    
-    C --> N[Continue to Next]
-    G --> N
-    M --> N
-    I --> O[Exit Process]
-    N --> P{More Operations?}
-    P -->|Yes| A
-    P -->|No| Q[Complete Successfully]
-```
-
-## Key Components
 
 ### Core Components
-- **Argument Parser**: Handles CLI arguments and flags
-- **Project Validator**: Ensures valid Node.js project structure
-- **Package Scanner**: Uses `npm outdated` to find updates
-- **Dependency Resolver**: Orders updates based on dependencies
-- **Update Engine**: Executes package installations
-- **Test Runner**: Validates updates with project tests
-- **Logger**: Creates detailed audit trails
 
-### MCP Integration
-- **Tool Discovery**: Exposes available PackUpdate operations
-- **Auto-detection**: Identifies project type automatically
-- **Response Formatting**: Structures output for AI consumption
-- **Error Handling**: Provides meaningful error messages
+#### 🎯 Main Entry Point (`updatePackages.ts`)
+- **Responsibility**: Application orchestration and flow control
+- **Size**: ~70 lines (reduced from 400+ through refactoring)
+- **Functions**: CLI parsing, path validation, operation routing
 
-### Safety Features
-- **Safe Mode**: Tests before permanent installation
-- **Rollback**: Reverts failed updates
-- **Dependency Ordering**: Prevents dependency conflicts
-- **Comprehensive Logging**: Full audit trail for troubleshooting
+#### 🔧 Utilities (`utils/`)
+
+**Logger (`logger.ts`)**
+- **Dual Logging System**: Summary and detailed logs
+- **Summary Log**: High-level events and results
+- **Detailed Log**: Full command output, STDOUT/STDERR, debug info
+- **Quiet Mode**: Respects console output preferences
+
+**Version (`version.ts`)**
+- **Semantic Version Analysis**: Major, minor, patch detection
+- **Breaking Change Assessment**: Risk evaluation algorithms
+- **Update Compatibility**: Version comparison utilities
+
+**CLI (`cli.ts`)**
+- **Argument Parsing**: Flag detection and validation
+- **Help System**: Comprehensive usage documentation
+- **Special Flags**: Version, type, help handling
+
+#### 🏗️ Services (`services/`)
+
+**Package Service (`packageService.ts`)**
+- **NPM Operations**: Install, outdated detection, dependency trees
+- **Output Capture**: Full npm command logging
+- **Error Handling**: Graceful failure management
+- **Version Filtering**: Minor-only, security-only options
+
+**Update Service (`updateService.ts`)**
+- **Smart Algorithm**: Latest → Wanted → Revert strategy
+- **Safe Prioritization**: Risk-based update ordering
+- **Progress Tracking**: Detailed update status reporting
+- **Rollback Capability**: Automatic reversion on failure
+
+**Report Service (`reportService.ts`)**
+- **Security Analysis**: Vulnerability detection and assessment
+- **Breaking Change Detection**: Major version and peer dependency analysis
+- **Dependency Intelligence**: Circular dependency detection
+- **Comprehensive Reporting**: JSON and console output formats
+
+**Test Service (`testService.ts`)**
+- **Script Execution**: npm run build/test with output capture
+- **Failure Detection**: Exit code monitoring
+- **Output Logging**: Full build/test output preservation
+- **Conditional Execution**: Script existence validation
+
+**Cleanup Service (`cleanupService.ts`)**
+- **Unused Package Detection**: Depcheck integration with fallback
+- **Deduplication**: npm dedupe with statistics
+- **Safe Removal**: Conservative unused package elimination
+- **Optimization**: node_modules size reduction
+
+**Dependency Service (`dependencyService.ts`)**
+- **Update Ordering**: Dependency-aware update sequencing
+- **Circular Detection**: Dependency loop identification
+- **Resolution Logic**: Conflict resolution algorithms
+
+## Python Architecture
+
+### Directory Structure
+```
+packUpdate/
+├── main.py                   # Entry point with proper imports
+├── updatePackages.py        # Main application logic
+├── utils/                   # Utility modules
+│   ├── logger.py           # Logging utilities with dual system
+│   ├── version.py          # Version comparison functions
+│   └── cli.py             # CLI argument parsing & help
+└── services/               # Business logic modules
+    ├── package_service.py  # NPM operations
+    ├── report_service.py   # Report generation
+    └── cleanup_service.py  # Package cleanup operations
+```
+
+### Cross-Platform Consistency
+- **Identical Functionality**: Same features across Node.js and Python
+- **Consistent CLI**: Same flags and behavior
+- **Unified Logging**: Same log format and structure
+- **Equivalent Algorithms**: Same smart update logic
+
+## Data Flow Architecture
+
+### Update Process Flow
+```mermaid
+graph TD
+    A[CLI Input] --> B[Parse Arguments]
+    B --> C{Operation Type?}
+    C -->|Update| D[Get Outdated Packages]
+    C -->|Report| E[Generate Report]
+    C -->|Cleanup| F[Cleanup Operations]
+    
+    D --> G[Breaking Change Analysis]
+    G --> H[Prioritize Safe Packages]
+    H --> I[Resolve Dependencies]
+    I --> J[Smart Update Algorithm]
+    
+    J --> K{Safe Mode?}
+    K -->|Yes| L[Try Latest → Wanted → Revert]
+    K -->|No| M[Try Latest Only]
+    
+    L --> N[Run Tests After Each]
+    M --> O[Install Package]
+    N --> P[Log Results]
+    O --> P
+    P --> Q[Final Summary]
+```
+
+### Logging Architecture
+```mermaid
+graph LR
+    A[Console Output] --> B[log()]
+    B --> C[Console Display]
+    B --> D[Detailed Log]
+    
+    E[High-Level Events] --> F[writeLog()]
+    F --> G[Summary Log]
+    
+    H[Command Execution] --> I[logCommand()]
+    I --> D
+    
+    J[Package Operations] --> K[logPackageOperation()]
+    K --> D
+    
+    L[Test Results] --> M[logTestExecution()]
+    M --> D
+```
+
+## Feature Architecture
+
+### Breaking Change Detection
+```typescript
+interface BreakingChangeAnalysis {
+  safeUpdates: string[];           // Low-risk packages
+  riskyUpdates: string[];          // High-risk packages
+  analysis: Record<string, {
+    hasMajorVersionChange: boolean;
+    riskLevel: 'low' | 'high';
+    hasBreakingChanges: boolean;
+    migrationRequired: boolean;
+  }>;
+  peerDependencyIssues: Record<string, any>;
+}
+```
+
+### Smart Update Algorithm
+1. **Risk Assessment**: Analyze each package for breaking changes
+2. **Prioritization**: Safe packages updated first
+3. **Fallback Strategy**: Latest → Wanted → Current version
+4. **Validation**: Build and test after each update
+5. **Rollback**: Automatic reversion on failure
+
+### Comprehensive Reporting
+```typescript
+interface ComprehensiveReport {
+  timestamp: string;
+  project: string;
+  security: {
+    vulnerabilities: Record<string, any>;
+    vulnerable_packages: string[];
+  };
+  dependencies: {
+    total: number;
+    circular: string[];
+    outdated: number;
+    outdated_list: Record<string, OutdatedPackage>;
+  };
+  breakingChanges: BreakingChangeAnalysis;
+  recommendations: string[];
+}
+```
+
+## Integration Architecture
+
+### MCP Server Integration
+- **AI-Powered Analysis**: Intelligent failure resolution
+- **Real-time Progress**: Live update streaming
+- **Context Awareness**: Project-specific recommendations
+- **Automated Decision Making**: AI-assisted update strategies
+
+### CI/CD Integration
+- **Quiet Mode**: Automation-friendly output
+- **Exit Codes**: Proper success/failure signaling
+- **JSON Reports**: Machine-readable output
+- **Log Preservation**: Complete audit trails
+
+## Performance Optimizations
+
+### Modular Loading
+- **Lazy Imports**: Load modules only when needed
+- **Tree Shaking**: Eliminate unused code
+- **Caching**: Intelligent dependency caching
+- **Parallel Processing**: Concurrent operations where safe
+
+### Memory Management
+- **Stream Processing**: Handle large outputs efficiently
+- **Garbage Collection**: Proper resource cleanup
+- **Buffer Management**: Optimal memory usage
+- **Process Isolation**: Separate npm command execution
+
+## Security Architecture
+
+### Safe Execution
+- **Sandboxed Commands**: Isolated npm operations
+- **Input Validation**: CLI argument sanitization
+- **Path Traversal Protection**: Secure file operations
+- **Permission Checks**: Proper access validation
+
+### Vulnerability Management
+- **Security Scanning**: Automated vulnerability detection
+- **Risk Assessment**: CVE severity analysis
+- **Safe Updates**: Security-focused update prioritization
+- **Audit Trails**: Complete security logging
+
+## Extensibility
+
+### Plugin Architecture
+- **Service Modules**: Easy feature addition
+- **Hook System**: Pre/post operation hooks
+- **Configuration**: Flexible behavior customization
+- **API Compatibility**: Stable interfaces for extensions
+
+### Future Enhancements
+- **Custom Rules**: User-defined update policies
+- **Integration APIs**: Third-party tool integration
+- **Advanced Analytics**: Machine learning insights
+- **Distributed Updates**: Multi-project coordination
+
+## Quality Assurance
+
+### Testing Strategy
+- **Unit Tests**: Individual module testing
+- **Integration Tests**: Cross-module functionality
+- **End-to-End Tests**: Complete workflow validation
+- **Performance Tests**: Scalability verification
+
+### Code Quality
+- **TypeScript**: Full type safety
+- **ESLint**: Code style enforcement
+- **Documentation**: Comprehensive inline docs
+- **Error Handling**: Graceful failure management
+
+This architecture ensures PackUpdate remains maintainable, extensible, and reliable while providing comprehensive package management capabilities.

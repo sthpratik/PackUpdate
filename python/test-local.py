@@ -47,7 +47,7 @@ def test_packupdate():
         print("Testing PackUpdate...")
         subprocess.run([
             sys.executable, 
-            "packUpdate/updatePackages.py", 
+            "main.py", 
             test_dir
         ], check=True)
         

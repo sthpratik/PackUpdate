@@ -50,6 +50,10 @@ class PackUpdateMCPServer {
               },
               safe_mode: { type: "boolean", description: "Enable safe mode", default: false },
               quiet_mode: { type: "boolean", description: "Enable quiet mode", default: false },
+              minor_only: { type: "boolean", description: "Update only minor versions (1.2.x → 1.3.x, skip major updates)", default: false },
+              generate_report: { type: "boolean", description: "Generate comprehensive security & dependency report (no updates)", default: false },
+              remove_unused: { type: "boolean", description: "Clean up unused dependencies", default: false },
+              dedupe_packages: { type: "boolean", description: "Remove duplicate dependencies", default: false },
               passes: { type: "number", description: "Number of update passes", default: 1 }
             },
             required: ["project_path"]
@@ -76,7 +80,33 @@ class PackUpdateMCPServer {
           inputSchema: {
             type: "object",
             properties: {
-              project_path: { type: "string", description: "Path to the project (to find logs)" }
+              project_path: { type: "string", description: "Path to the project (to find logs)" },
+              detailed: { type: "boolean", description: "Get detailed logs instead of summary", default: false }
+            },
+            required: ["project_path"]
+          }
+        },
+        {
+          name: "analyze_logs",
+          description: "Analyze PackUpdate logs for issues and provide troubleshooting recommendations",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_path: { type: "string", description: "Path to the project (to find logs)" },
+              log_count: { type: "number", description: "Number of recent logs to analyze", default: 3 }
+            },
+            required: ["project_path"]
+          }
+        },
+        {
+          name: "fix_and_update",
+          description: "Analyze logs, fix identified issues, and attempt package updates",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_path: { type: "string", description: "Path to the project" },
+              auto_fix: { type: "boolean", description: "Automatically apply fixes", default: true },
+              safe_mode: { type: "boolean", description: "Enable safe mode for updates", default: true }
             },
             required: ["project_path"]
           }
@@ -106,6 +136,10 @@ class PackUpdateMCPServer {
             return await this.getPackUpdateVersion(args);
           case "get_update_logs":
             return await this.getUpdateLogs(args);
+          case "analyze_logs":
+            return await this.analyzeLogs(args);
+          case "fix_and_update":
+            return await this.fixAndUpdate(args);
           case "list_outdated_packages":
             return await this.listOutdatedPackages(args);
           default:
@@ -125,9 +159,30 @@ class PackUpdateMCPServer {
   }
 
   async updatePackages(args) {
-    const { project_path, package_manager = "auto", safe_mode = false, quiet_mode = false, passes = 1 } = args;
+    const { 
+      project_path, 
+      package_manager = "auto", 
+      safe_mode = false, 
+      quiet_mode = false, 
+      minor_only = false, 
+      generate_report = false,
+      remove_unused = false,
+      dedupe_packages = false,
+      passes = 1 
+    } = args;
     
     this.log(`Starting package update for: ${project_path}`);
+    
+    // Automatically analyze logs first to provide context
+    let logAnalysis = "";
+    try {
+      const analysis = await this.analyzeLogs({ project_path, log_count: 2 });
+      logAnalysis = analysis.content[0].text;
+      this.log("Log analysis completed");
+    } catch (error) {
+      this.log(`Log analysis failed: ${error.message}`);
+      logAnalysis = "No previous logs found or analysis failed.";
+    }
     
     let manager = package_manager;
     
@@ -143,6 +198,10 @@ class PackUpdateMCPServer {
     
     if (safe_mode) cmdArgs.push("--safe");
     if (quiet_mode) cmdArgs.push("--quiet");
+    if (minor_only) cmdArgs.push("--minor-only");
+    if (generate_report) cmdArgs.push("--generate-report");
+    if (remove_unused) cmdArgs.push("--remove-unused");
+    if (dedupe_packages) cmdArgs.push("--dedupe-packages");
     if (passes > 1) cmdArgs.push(`--pass=${passes}`);
 
     this.log(`Executing command: ${command} ${cmdArgs.join(' ')}`);
@@ -156,7 +215,7 @@ class PackUpdateMCPServer {
       content: [
         {
           type: "text",
-          text: `PackUpdate (${manager}) completed for: ${project_path}\n\nOutput:\n${result.output}\n\nLogs:\n${logs}`
+          text: `## Previous Log Analysis\n${logAnalysis}\n\n## PackUpdate Execution\n\nPackUpdate (${manager}) completed for: ${project_path}\n\nOutput:\n${result.output}\n\nLatest Logs:\n${logs}`
         }
       ]
     };
@@ -319,6 +378,192 @@ class PackUpdateMCPServer {
       this.log(`Error reading log files: ${error.message}`);
       return `Error reading log files: ${error.message}`;
     }
+  }
+
+  async analyzeLogs(args) {
+    const { project_path, log_count = 3 } = args;
+    this.log(`Analyzing logs from: ${project_path}`);
+    
+    const logsDir = join(project_path, "logs");
+    if (!existsSync(logsDir)) {
+      return {
+        content: [{
+          type: "text",
+          text: "No logs directory found. Run PackUpdate first to generate logs."
+        }]
+      };
+    }
+
+    try {
+      const logFiles = readdirSync(logsDir)
+        .filter(file => file.startsWith("packupdate-") && file.endsWith(".log"))
+        .sort()
+        .reverse()
+        .slice(0, log_count);
+
+      if (logFiles.length === 0) {
+        return {
+          content: [{
+            type: "text",
+            text: "No PackUpdate log files found."
+          }]
+        };
+      }
+
+      let analysis = `## Log Analysis Results\n\nAnalyzed ${logFiles.length} recent log files:\n\n`;
+      const issues = [];
+      const recommendations = [];
+
+      for (const logFile of logFiles) {
+        const logPath = join(logsDir, logFile);
+        const content = readFileSync(logPath, "utf-8");
+        
+        analysis += `### ${logFile}\n`;
+        
+        // Analyze for common issues
+        if (content.includes("EACCES") || content.includes("permission denied")) {
+          issues.push("Permission errors detected");
+          recommendations.push("Run with sudo or fix npm permissions");
+        }
+        
+        if (content.includes("ENOTFOUND") || content.includes("network")) {
+          issues.push("Network connectivity issues");
+          recommendations.push("Check internet connection and npm registry access");
+        }
+        
+        if (content.includes("peer dep") || content.includes("ERESOLVE")) {
+          issues.push("Dependency resolution conflicts");
+          recommendations.push("Use --legacy-peer-deps or resolve peer dependencies manually");
+        }
+        
+        if (content.includes("test failed") || content.includes("Tests failed")) {
+          issues.push("Test failures preventing updates");
+          recommendations.push("Fix failing tests or use --skip-tests flag");
+        }
+        
+        if (content.includes("BREAKING CHANGE") || content.includes("major version")) {
+          issues.push("Breaking changes detected");
+          recommendations.push("Use --minor-only flag or review breaking changes manually");
+        }
+
+        // Count successful vs failed updates
+        const successCount = (content.match(/Successfully updated/g) || []).length;
+        const failCount = (content.match(/Failed to update/g) || []).length;
+        
+        analysis += `- Successful updates: ${successCount}\n`;
+        analysis += `- Failed updates: ${failCount}\n`;
+        
+        if (failCount > 0) {
+          const failedPackages = content.match(/Failed to update ([^\s]+)/g) || [];
+          analysis += `- Failed packages: ${failedPackages.join(", ")}\n`;
+        }
+        
+        analysis += "\n";
+      }
+
+      if (issues.length > 0) {
+        analysis += `## Issues Found\n${issues.map(i => `- ${i}`).join("\n")}\n\n`;
+        analysis += `## Recommendations\n${recommendations.map(r => `- ${r}`).join("\n")}\n\n`;
+      } else {
+        analysis += "## No major issues detected in recent logs.\n\n";
+      }
+
+      return {
+        content: [{
+          type: "text",
+          text: analysis
+        }]
+      };
+    } catch (error) {
+      return {
+        content: [{
+          type: "text",
+          text: `Error analyzing logs: ${error.message}`
+        }]
+      };
+    }
+  }
+
+  async fixAndUpdate(args) {
+    const { project_path, auto_fix = true, safe_mode = true } = args;
+    this.log(`Starting fix and update process for: ${project_path}`);
+    
+    let report = "## Fix and Update Report\n\n";
+    
+    // First analyze logs to identify issues
+    const analysis = await this.analyzeLogs({ project_path, log_count: 3 });
+    const analysisText = analysis.content[0].text;
+    
+    report += "### Log Analysis\n" + analysisText + "\n";
+    
+    if (!auto_fix) {
+      report += "### Auto-fix disabled. Manual intervention required.\n";
+      return {
+        content: [{
+          type: "text",
+          text: report
+        }]
+      };
+    }
+
+    // Apply common fixes
+    report += "### Applying Fixes\n\n";
+    
+    try {
+      // Check if package.json exists
+      const packageJsonPath = join(project_path, "package.json");
+      if (!existsSync(packageJsonPath)) {
+        report += "❌ No package.json found. Cannot proceed.\n";
+        return {
+          content: [{
+            type: "text",
+            text: report
+          }]
+        };
+      }
+
+      // Clear npm cache if network issues detected
+      if (analysisText.includes("network") || analysisText.includes("ENOTFOUND")) {
+        report += "🔧 Clearing npm cache...\n";
+        const cacheResult = await this.executeCommand("npm", ["cache", "clean", "--force"], { cwd: project_path });
+        report += cacheResult.code === 0 ? "✅ Cache cleared\n" : "❌ Cache clear failed\n";
+      }
+
+      // Install missing dependencies
+      report += "🔧 Installing dependencies...\n";
+      const installResult = await this.executeCommand("npm", ["install"], { cwd: project_path });
+      report += installResult.code === 0 ? "✅ Dependencies installed\n" : "❌ Install failed\n";
+
+      // Now attempt package update with appropriate flags
+      report += "\n### Attempting Package Update\n\n";
+      
+      const updateArgs = [project_path];
+      if (safe_mode) updateArgs.push("--safe-mode");
+      if (analysisText.includes("Breaking changes")) updateArgs.push("--minor-only");
+      if (analysisText.includes("test failed")) updateArgs.push("--quiet");
+      
+      report += `🚀 Running PackUpdate with args: ${updateArgs.join(" ")}\n`;
+      
+      const updateResult = await this.updatePackages({ 
+        project_path, 
+        safe_mode, 
+        minor_only: analysisText.includes("Breaking changes"),
+        quiet_mode: analysisText.includes("test failed")
+      });
+      
+      report += "\n### Update Results\n";
+      report += updateResult.content[0].text;
+      
+    } catch (error) {
+      report += `\n❌ Error during fix and update: ${error.message}\n`;
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: report
+      }]
+    };
   }
 
   executeCommand(command, args = [], options = {}) {
