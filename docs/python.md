@@ -1,15 +1,41 @@
-# PackUpdate
+# Python Package - packUpdate
 
-PackUpdate is a Python utility designed to help developers manage and update their Node.js project dependencies efficiently. It ensures that package updates are validated through tests and resolves audit issues automatically. The tool prioritizes updating packages to their latest versions, but if issues are detected, it falls back to updating to the "wanted" version.
+## Overview
+
+`packUpdate` is a comprehensive Python utility that automates the process of updating Node.js project dependencies with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
+
+**Available Commands:**
+- `packUpdate` - Main command name
+- `updatepkgs` - Short alias for convenience
 
 ## Features
 
-- **Update Packages**: Updates Node.js project dependencies to their latest versions if no issues are detected.
-- **Fallback to Wanted Version**: If issues arise during testing, updates packages to the "wanted" version instead.
-- **Audit Fix**: Automatically resolves audit issues in the project.
-- **Validation**: Runs tests to ensure package updates do not introduce breaking changes.
-- **Comprehensive Logging**: Creates unique timestamped log files for every run.
-- **Quiet Mode**: Runs in background with minimal console output while maintaining full logging.
+### 🚀 Core Update Features
+- **Smart Update Algorithm**: Latest → Wanted → Revert strategy with automatic rollback
+- **Safe Mode**: Test builds and tests after each update
+- **Dependency Resolution**: Updates packages in correct dependency order
+- **Multiple Passes**: Configurable number of update attempts
+
+### 🎯 Interactive Mode
+- **Selective Package Updates**: Choose specific packages from an interactive checkbox list
+- **Version Control**: Select between minor or major updates for each package individually
+- **Batch Operations**: Update multiple packages with different version strategies at once
+- **Update Preview**: See exactly what will be updated before confirming changes
+- **Skip Options**: Easily skip packages you don't want to update
+- **Safe Integration**: Works with safe mode for tested interactive updates
+
+### 🔧 Version Management
+- **Automatic Version Updates**: Update project version after successful package updates
+- **Flexible Version Types**: Support for major, minor, patch, or specific version numbers
+- **Dual File Updates**: Updates both package.json and package-lock.json automatically
+- **Success-Based Updates**: Only updates version if package updates were successful
+- **Semver Compliance**: Maintains proper semantic versioning format
+
+### 📝 Advanced Logging
+- **Comprehensive Logging**: Creates unique timestamped log files for every run
+- **Quiet Mode**: Runs in background with minimal console output while maintaining full logging
+- **Error Tracking**: All errors are captured with detailed information
+- **Success Tracking**: Successful updates are logged with version details
 
 ## Prerequisites
 
@@ -27,7 +53,145 @@ pip install packupdate
 
 ## Usage
 
-Run the CLI tool to update Node.js project dependencies:
+### Basic Commands
+
+```bash
+# Update packages in current directory
+packUpdate
+# or use the short alias
+updatepkgs
+
+# Update specific project
+packUpdate /path/to/project
+updatepkgs /path/to/project
+
+# Safe mode with testing
+packUpdate --safe
+updatepkgs --safe
+
+# Interactive mode for selective updates
+packUpdate --interactive
+updatepkgs --interactive
+
+# Quiet mode for automation
+packUpdate --quiet
+updatepkgs --quiet
+```
+
+### Interactive Mode
+
+```bash
+# Interactive package selection
+packUpdate --interactive
+updatepkgs --interactive
+
+# Interactive with safe mode
+packUpdate --interactive --safe
+updatepkgs --interactive --safe
+```
+
+**Interactive Features:**
+- **Package Selection**: Choose specific packages to update from a list
+- **Version Choice**: Select between minor or major version updates for each package
+- **Batch Operations**: Update multiple packages with different version strategies
+- **Update Preview**: See exactly what will be updated before confirming
+- **Selective Control**: Skip packages you don't want to update
+
+### Version Management
+
+```bash
+# Update packages and bump project version
+packUpdate --update-version=minor
+updatepkgs --update-version=major
+
+# Set specific project version after updates
+packUpdate --update-version=1.2.3
+updatepkgs --update-version=2.0.0
+
+# Combined with other options
+packUpdate --safe --update-version=patch
+updatepkgs --interactive --update-version=minor
+```
+
+**Version Update Types:**
+- **`major`** - Increment major version (1.0.0 → 2.0.0)
+- **`minor`** - Increment minor version (1.0.0 → 1.1.0)  
+- **`patch`** - Increment patch version (1.0.0 → 1.0.1)
+- **`x.y.z`** - Set specific version (e.g., 1.2.3)
+
+### Version-Specific Updates
+
+```bash
+# Update only minor versions (safer)
+packUpdate --minor-only
+updatepkgs --minor-only
+
+# Multiple update passes
+packUpdate --pass=3
+updatepkgs --pass=3
+
+# Combined safe minor updates
+packUpdate --safe --minor-only
+updatepkgs --safe --minor-only
+```
+
+### Analysis & Reporting
+
+```bash
+# Generate comprehensive report (no updates)
+packUpdate --generate-report
+updatepkgs --generate-report
+
+# Report with specific project
+packUpdate /path/to/project --generate-report
+updatepkgs /path/to/project --generate-report
+
+# Quiet report generation
+packUpdate --generate-report --quiet
+updatepkgs --generate-report --quiet
+```
+
+### Cleanup Operations
+
+```bash
+# Remove unused dependencies
+packUpdate --remove-unused
+updatepkgs --remove-unused
+
+# Deduplicate packages
+packUpdate --dedupe-packages
+updatepkgs --dedupe-packages
+
+# Combined cleanup
+packUpdate --remove-unused --dedupe-packages
+updatepkgs --remove-unused --dedupe-packages
+```
+
+## Command Line Options
+
+### Core Options
+- `--safe` - Enable safe mode (test updates before applying)
+- `--quiet` - Enable quiet mode (minimal console output)
+- `--interactive` - Interactive mode for selective package updates
+- `--pass=<number>` - Number of update passes (default: 1)
+
+### Update Control
+- `--minor-only` - Update only minor versions (1.2.x → 1.3.x, skip major updates)
+
+### Analysis & Reporting
+- `--generate-report` - Generate comprehensive security & dependency report (no updates)
+
+### Cleanup & Maintenance
+- `--remove-unused` - Clean up unused dependencies
+- `--dedupe-packages` - Remove duplicate dependencies
+
+### Version Management
+- `--update-version=<type>` - Update project version after successful updates (major|minor|patch|x.y.z)
+
+### Information
+- `--version` - Show package version
+- `--type` - Show package type (python)
+- `--help` - Show help message
 
 ```bash
 updatenpmpackages <project_path> [--safe] [--quiet] [--pass=N]
@@ -263,20 +427,35 @@ To publish the `PackUpdate` package to PyPI, follow these steps:
   twine upload --repository-url https://test.pypi.org/legacy/ dist/*
   ```
 
-## Contributing
+This comprehensive Python package provides enterprise-grade dependency management with safety, intelligence, and automation capabilities.
 
-Contributions are welcome! Please follow these steps:
+## 📚 Documentation
+Full documentation is available at: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)
 
-1. Fork the repository.
-2. Create a new branch for your feature or bug fix.
-3. Commit your changes and push them to your fork.
-4. Submit a pull request.
+Or serve locally:
+```bash
+git clone https://github.com/sthpratik/PackUpdate.git
+cd PackUpdate/docs
+python -m http.server 3000
+```
 
-## License
+## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/sthpratik/PackUpdate/blob/main/LICENSE) file for details.
 
-## Support
+## 🙏 Acknowledgments
+- [npm](https://www.npmjs.com/) - Package management
+- [inquirer](https://github.com/magmax/python-inquirer) - Interactive CLI
+- [Python](https://www.python.org/) - Programming language
 
-If you encounter any issues or have questions, feel free to open an issue in the repository.
+## 🐛 Issues & Support
+- Report bugs: [GitHub Issues](https://github.com/sthpratik/PackUpdate/issues)
+- Feature requests: [GitHub Discussions](https://github.com/sthpratik/PackUpdate/discussions)
+- Documentation: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)
 

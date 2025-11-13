@@ -3,8 +3,8 @@ Package management operations
 """
 import subprocess
 import json
-from utils.logger import log, write_log
-from utils.version import is_minor_update
+from ..utils.logger import log, write_log
+from ..utils.version import is_minor_update
 
 def get_outdated_packages(project_path, minor_only=False):
     """Get outdated packages from npm"""

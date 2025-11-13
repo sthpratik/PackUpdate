@@ -6,12 +6,13 @@ PackUpdate is a versatile tool designed to streamline and manage package updates
 
 **Quick Start:**
 - **Node.js**: `npm install -g updatenpmpackages` → `updatepkgs --help`
-- **Python**: `pip install packUpdate` → `packUpdate --help`
+- **Python**: `pip install packUpdate` → `updatepkgs --help`
 - **Documentation**: [https://sthpratik.github.io/PackUpdate/#/](https://sthpratik.github.io/PackUpdate/#/)
 
 ## Features
 - Easy package management with modular architecture
 - Automated update checks with dependency resolution
+- Interactive mode for selective package updates
 - Safe mode for testing updates before applying them
 - Comprehensive logging with unique timestamped log files
 - Quiet mode for background execution

@@ -76,10 +76,33 @@ updatepkgs /path/to/project
 updatenpmpackages --safe
 updatepkgs --safe
 
+# Interactive mode for selective updates
+updatenpmpackages --interactive
+updatepkgs --interactive
+
 # Quiet mode for automation
 updatenpmpackages --quiet
 updatepkgs --quiet
 ```
+
+### Interactive Mode
+
+```bash
+# Interactive package selection
+updatenpmpackages --interactive
+updatepkgs --interactive
+
+# Interactive with safe mode
+updatenpmpackages --interactive --safe
+updatepkgs --interactive --safe
+```
+
+**Interactive Features:**
+- **Package Selection**: Choose specific packages to update from a list
+- **Version Choice**: Select between minor or major version updates for each package
+- **Batch Operations**: Update multiple packages with different version strategies
+- **Update Preview**: See exactly what will be updated before confirming
+- **Selective Control**: Skip packages you don't want to update
 
 ### Version-Specific Updates
 
@@ -129,11 +152,39 @@ updatenpmpackages --remove-unused --dedupe-packages
 updatepkgs --remove-unused --dedupe-packages
 ```
 
+### Version Management
+
+```bash
+# Update packages and bump project version
+updatenpmpackages --update-version=minor
+updatepkgs --update-version=major
+
+# Set specific project version after updates
+updatenpmpackages --update-version=1.2.3
+updatepkgs --update-version=2.0.0
+
+# Combined with other options
+updatenpmpackages --safe --update-version=patch
+updatepkgs --interactive --update-version=minor
+```
+
+**Version Update Types:**
+- **`major`** - Increment major version (1.0.0 → 2.0.0)
+- **`minor`** - Increment minor version (1.0.0 → 1.1.0)  
+- **`patch`** - Increment patch version (1.0.0 → 1.0.1)
+- **`x.y.z`** - Set specific version (e.g., 1.2.3)
+
+**Automatic Updates:**
+- Updates both `package.json` and `package-lock.json`
+- Only updates version if package updates were successful
+- Maintains proper semver format
+
 ## Command Line Options
 
 ### Core Options
 - `--safe` - Enable safe mode (test updates before applying)
 - `--quiet` - Enable quiet mode (minimal console output)
+- `--interactive` - Interactive mode for selective package updates
 - `--pass=<number>` - Number of update passes (default: 1)
 
 ### Update Control
@@ -145,6 +196,9 @@ updatepkgs --remove-unused --dedupe-packages
 ### Cleanup & Maintenance
 - `--remove-unused` - Clean up unused dependencies
 - `--dedupe-packages` - Remove duplicate dependencies
+
+### Version Management
+- `--update-version=<type>` - Update project version after successful updates (major|minor|patch|x.y.z)
 
 ### Information
 - `--version` - Show package version
@@ -166,3 +220,33 @@ updatepkgs --remove-unused --dedupe-packages
 - **Safe-First Updates**: Prioritizes low-risk packages
 
 This comprehensive Node.js package provides enterprise-grade dependency management with safety, intelligence, and automation capabilities.
+
+## 📚 Documentation
+Full documentation is available at: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)
+
+Or serve locally:
+```bash
+git clone https://github.com/sthpratik/PackUpdate.git
+cd PackUpdate/docs
+python -m http.server 3000
+```
+
+## 🤝 Contributing
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+This project is licensed under the MIT License - see the [LICENSE](https://github.com/sthpratik/PackUpdate/blob/main/LICENSE) file for details.
+
+## 🙏 Acknowledgments
+- [npm](https://www.npmjs.com/) - Package management
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [depcheck](https://github.com/depcheck/depcheck) - Unused dependency detection
+
+## 🐛 Issues & Support
+- Report bugs: [GitHub Issues](https://github.com/sthpratik/PackUpdate/issues)
+- Feature requests: [GitHub Discussions](https://github.com/sthpratik/PackUpdate/discussions)
+- Documentation: [PackUpdate Docs](https://sthpratik.github.io/PackUpdate/#/)

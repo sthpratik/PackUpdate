@@ -1,7 +1,7 @@
 
 <!-- ![logo](_media/logo.jpeg) -->
 
-# packUpdate <small>0.1.7</small>
+# packUpdate <small>0.1.8</small>
 
 > A magical node package updator.
 

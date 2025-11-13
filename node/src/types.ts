@@ -50,10 +50,12 @@ export interface ComprehensiveReport {
 export interface CliArgs {
   projectPath: string;
   safeMode: boolean;
+  interactive: boolean;
   minorOnly: boolean;
   generateReport: boolean;
   removeUnused: boolean;
   dedupePackages: boolean;
   quietMode: boolean;
   passes: number;
+  updateVersion?: string;
 }

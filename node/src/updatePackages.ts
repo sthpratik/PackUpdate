@@ -10,6 +10,9 @@ import { parseCliArgs, handleSpecialFlags } from "./utils/cli";
 import { updatePackagesInPass, printFinalSummary } from "./services/updateService";
 import { generateComprehensiveReport } from "./services/reportService";
 import { removeUnusedPackages, dedupePackages } from "./services/cleanupService";
+import { InteractiveService } from "./services/interactiveService";
+import { getOutdatedPackages } from "./services/packageService";
+import { VersionService } from "./services/versionService";
 
 /**
  * Validate project path exists and is a directory
@@ -58,7 +61,8 @@ const executeUpdateProcess = (
   safeMode: boolean, 
   minorOnly: boolean, 
   quietMode: boolean, 
-  passes: number
+  passes: number,
+  updateVersion?: string
 ): void => {
   const allResults: UpdateResult[] = [];
   
@@ -74,12 +78,82 @@ const executeUpdateProcess = (
   }
 
   printFinalSummary(allResults, passes);
+  
+  // Update project version if requested and updates were successful
+  if (updateVersion && allResults.some(result => result.updated.length > 0)) {
+    VersionService.updateProjectVersion(projectPath, updateVersion, quietMode);
+  }
+};
+
+/**
+ * Execute interactive mode for selective package updates
+ */
+const executeInteractiveMode = async (projectPath: string, safeMode: boolean, quietMode: boolean, updateVersion?: string): Promise<void> => {
+  try {
+    log("🔍 Checking for outdated packages...");
+    const outdatedPackages = getOutdatedPackages(projectPath);
+    
+    if (Object.keys(outdatedPackages).length === 0) {
+      log("✅ All packages are up to date!");
+      return;
+    }
+
+    const interactiveService = new InteractiveService();
+    const selectedPackages = await interactiveService.selectPackages(outdatedPackages);
+    
+    if (selectedPackages.length === 0) {
+      log("No packages selected for update.");
+      return;
+    }
+
+    const confirmed = await interactiveService.confirmUpdates(selectedPackages);
+    if (!confirmed) {
+      log("Update cancelled by user.");
+      return;
+    }
+
+    log("\n🚀 Starting interactive updates...");
+    
+    // Process selected packages
+    const results: UpdateResult = { updated: [], failed: [] };
+    
+    for (const choice of selectedPackages) {
+      const targetVersion = choice.updateType === 'major' ? choice.latest : choice.wanted;
+      log(`\nUpdating ${choice.name} from ${choice.current} to ${targetVersion}...`);
+      
+      try {
+        // Use the existing update logic from updateService
+        const { execSync } = require('child_process');
+        const command = `npm install ${choice.name}@${targetVersion}`;
+        
+        execSync(command, { cwd: projectPath, stdio: quietMode ? 'pipe' : 'inherit' });
+        results.updated.push([choice.name, choice.current, targetVersion]);
+        log(`✅ Successfully updated ${choice.name}`);
+        
+      } catch (error) {
+        results.failed.push(choice.name);
+        log(`❌ Failed to update ${choice.name}: ${error}`);
+      }
+    }
+
+    // Print final summary
+    printFinalSummary([results], 1);
+    
+    // Update project version if requested and updates were successful
+    if (updateVersion && results.updated.length > 0) {
+      VersionService.updateProjectVersion(projectPath, updateVersion, quietMode);
+    }
+    
+  } catch (error) {
+    log(`❌ Interactive mode failed: ${error}`);
+    throw error;
+  }
 };
 
 /**
  * Main application entry point
  */
-const main = (): void => {
+const main = async (): Promise<void> => {
   // Handle special flags first (help, version, type)
   if (handleSpecialFlags()) {
     return;
@@ -87,11 +161,11 @@ const main = (): void => {
 
   // Parse CLI arguments
   const cliArgs = parseCliArgs();
-  const { projectPath, safeMode, minorOnly, generateReport, removeUnused, dedupePackages, quietMode, passes } = cliArgs;
+  const { projectPath, safeMode, interactive, minorOnly, generateReport, removeUnused, dedupePackages, quietMode, passes, updateVersion } = cliArgs;
 
   // Set up logging
   setQuietMode(quietMode);
-  writeLog(`PackUpdate started - Project: ${projectPath}, Safe Mode: ${safeMode}, Minor Only: ${minorOnly}, Generate Report: ${generateReport}, Remove Unused: ${removeUnused}, Dedupe: ${dedupePackages}, Passes: ${passes}, Quiet: ${quietMode}`);
+  writeLog(`PackUpdate started - Project: ${projectPath}, Safe Mode: ${safeMode}, Interactive: ${interactive}, Minor Only: ${minorOnly}, Generate Report: ${generateReport}, Remove Unused: ${removeUnused}, Dedupe: ${dedupePackages}, Passes: ${passes}, Update Version: ${updateVersion || 'none'}, Quiet: ${quietMode}`);
 
   // Validate project path
   validateProjectPath(projectPath);
@@ -108,8 +182,14 @@ const main = (): void => {
     return;
   }
 
+  // Handle interactive mode
+  if (interactive) {
+    await executeInteractiveMode(projectPath, safeMode, quietMode, updateVersion);
+    return;
+  }
+
   // Execute update process
-  executeUpdateProcess(projectPath, safeMode, minorOnly, quietMode, passes);
+  executeUpdateProcess(projectPath, safeMode, minorOnly, quietMode, passes, updateVersion);
 
   // Log completion
   writeLog(`PackUpdate completed - Log file: ${getLogFile()}`);
@@ -119,4 +199,7 @@ const main = (): void => {
 };
 
 // Execute main function
-main();
+main().catch(error => {
+  console.error('❌ Application error:', error);
+  process.exit(1);
+});

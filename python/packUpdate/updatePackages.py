@@ -4,10 +4,12 @@ Main entry point for the application
 """
 import os
 import sys
-from utils.logger import set_quiet_mode, write_log, log, get_log_file
-from utils.cli import parse_cli_args, handle_special_flags
-from services.report_service import generate_comprehensive_report
-from services.package_service import get_outdated_packages, get_dependency_tree, install_package
+from .utils.logger import set_quiet_mode, write_log, log, get_log_file
+from .utils.cli import parse_cli_args, handle_special_flags
+from .services.report_service import generate_comprehensive_report
+from .services.package_service import get_outdated_packages, get_dependency_tree, install_package
+from .services.interactive_service import InteractiveService
+from .services.version_service import VersionService
 
 def validate_project_path(project_path):
     """Validate project path exists and is a directory"""
@@ -134,7 +136,7 @@ def update_packages_in_order(outdated_packages, dependency_tree, project_path, s
         updated_packages.append((package, current_version, final_version))
     return updated_packages, failed_updates
 
-def run_update_process(project_path, safe_mode, passes, minor_only, quiet_mode):
+def run_update_process(project_path, safe_mode, passes, minor_only, quiet_mode, update_version=None):
     """Execute update process with multiple passes"""
     import subprocess
     
@@ -173,6 +175,76 @@ def print_final_summary(all_updated_packages, all_failed_updates):
         log("\nPackages that failed to update:")
         for package in set(all_failed_updates):
             log(f"- {package}")
+    
+    # Update project version if requested and updates were successful
+    if update_version and any(updated_packages for updated_packages, _ in all_results):
+        VersionService.update_project_version(project_path, update_version, quiet_mode)
+
+def run_interactive_mode(project_path, safe_mode, quiet_mode, update_version=None):
+    """Execute interactive mode for selective package updates"""
+    try:
+        log("🔍 Checking for outdated packages...")
+        outdated_packages = get_outdated_packages(project_path)
+        
+        if not outdated_packages:
+            log("✅ All packages are up to date!")
+            return
+
+        selected_packages = InteractiveService.select_packages(outdated_packages)
+        
+        if not selected_packages:
+            log("No packages selected for update.")
+            return
+
+        confirmed = InteractiveService.confirm_updates(selected_packages)
+        if not confirmed:
+            log("Update cancelled by user.")
+            return
+
+        log("\n🚀 Starting interactive updates...")
+        
+        # Process selected packages
+        updated_packages = []
+        failed_updates = []
+        
+        for choice in selected_packages:
+            target_version = choice.latest if choice.update_type == 'major' else choice.wanted
+            log(f"\nUpdating {choice.name} from {choice.current} to {target_version}...")
+            
+            try:
+                success = install_package(choice.name, target_version, project_path, safe_mode, quiet_mode)
+                if success:
+                    updated_packages.append((choice.name, choice.current, target_version))
+                    log(f"✅ Successfully updated {choice.name}")
+                else:
+                    failed_updates.append(choice.name)
+                    log(f"❌ Failed to update {choice.name}")
+            except Exception as error:
+                failed_updates.append(choice.name)
+                log(f"❌ Failed to update {choice.name}: {error}")
+
+        # Print summary
+        log("\n" + "=" * 60)
+        log("Interactive Update Summary:")
+        log("{:<40} {:<10} {:<10}".format("Package", "Old Version", "New Version"))
+        log("-" * 60)
+        
+        if updated_packages:
+            for package, old_version, new_version in updated_packages:
+                log("{:<40} {:<10} {:<10}".format(package, old_version, new_version))
+        
+        if failed_updates:
+            log("\nPackages that failed to update:")
+            for package in failed_updates:
+                log(f"- {package}")
+        
+        # Update project version if requested and updates were successful
+        if update_version and updated_packages:
+            VersionService.update_project_version(project_path, update_version, quiet_mode)
+            
+    except Exception as error:
+        log(f"❌ Interactive mode failed: {error}")
+        raise error
 
 def handle_cleanup_operations(project_path, remove_unused, dedupe_packages, quiet_mode):
     """Handle cleanup operations"""
@@ -201,16 +273,18 @@ def main():
     cli_args = parse_cli_args()
     project_path = cli_args['project_path']
     safe_mode = cli_args['safe_mode']
+    interactive = cli_args['interactive']
     minor_only = cli_args['minor_only']
     generate_report = cli_args['generate_report']
     remove_unused = cli_args['remove_unused']
     dedupe_packages = cli_args['dedupe_packages']
     quiet_mode = cli_args['quiet_mode']
     passes = cli_args['passes']
+    update_version = cli_args['update_version']
 
     # Set up logging
     set_quiet_mode(quiet_mode)
-    write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Minor Only: {minor_only}, Generate Report: {generate_report}, Remove Unused: {remove_unused}, Dedupe: {dedupe_packages}, Passes: {passes}, Quiet: {quiet_mode}")
+    write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Interactive: {interactive}, Minor Only: {minor_only}, Generate Report: {generate_report}, Remove Unused: {remove_unused}, Dedupe: {dedupe_packages}, Passes: {passes}, Update Version: {update_version or 'none'}, Quiet: {quiet_mode}")
     
     # Validate project path
     validate_project_path(project_path)
@@ -225,8 +299,13 @@ def main():
         generate_comprehensive_report(project_path)
         return
     
+    # Handle interactive mode
+    if interactive:
+        run_interactive_mode(project_path, safe_mode, quiet_mode, update_version)
+        return
+    
     # Execute update process
-    run_update_process(project_path, safe_mode, passes, minor_only, quiet_mode)
+    run_update_process(project_path, safe_mode, passes, minor_only, quiet_mode, update_version)
     
     # Log completion
     write_log(f"PackUpdate completed - Log file: {get_log_file()}")

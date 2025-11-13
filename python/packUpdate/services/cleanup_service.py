@@ -5,7 +5,7 @@ import subprocess
 import json
 import os
 import shutil
-from utils.logger import log, write_log
+from ..utils.logger import log, write_log
 
 def remove_unused_packages(project_path, quiet_mode):
     """Remove unused dependencies from project"""

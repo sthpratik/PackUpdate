@@ -12,6 +12,14 @@ PackUpdate provides comprehensive package management capabilities with intellige
 - **Dependency-Aware Updates**: Updates packages in correct dependency order
 - **Multiple Pass Support**: Configurable number of update attempts
 
+### Interactive Mode
+- **Selective Package Updates**: Choose specific packages from an interactive checkbox list
+- **Version Control**: Select between minor or major updates for each package individually
+- **Batch Operations**: Update multiple packages with different version strategies at once
+- **Update Preview**: See exactly what will be updated before confirming changes
+- **Skip Options**: Easily skip packages you don't want to update
+- **Safe Integration**: Works with safe mode for tested interactive updates
+
 ### Safe Mode
 - **Build Validation**: Runs `npm run build` after each update
 - **Test Validation**: Runs `npm test` after each update
@@ -57,6 +65,13 @@ PackUpdate provides comprehensive package management capabilities with intellige
 - **Dependency Tree Optimization**: Reduces dependency complexity
 - **Cache Optimization**: Improves npm cache efficiency
 - **Performance Metrics**: Measures optimization benefits
+
+### Version Management
+- **Automatic Version Updates**: Update project version after successful package updates
+- **Flexible Version Types**: Support for major, minor, patch, or specific version numbers
+- **Dual File Updates**: Updates both package.json and package-lock.json automatically
+- **Success-Based Updates**: Only updates version if package updates were successful
+- **Semver Compliance**: Maintains proper semantic versioning format
 
 ## 📊 Comprehensive Reporting
 

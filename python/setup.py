@@ -7,18 +7,22 @@ long_description = (this_directory / "python.md").read_text()
 
 setup(
     name="packupdate",
-    version="1.0.5",
-    description="A Python utility to update Node.js project dependencies safely.",
+    version="1.0.6",
+    description="A Python utility to update Node.js project dependencies safely with interactive mode and version management.",
     long_description=long_description,
     long_description_content_type='text/markdown',
     author="Manish Shrestha",
     author_email="sth.pratik@gmail.com",
     url="https://github.com/sthpratik/PackUpdate",
     packages=find_packages(),  # Automatically finds the 'packUpdate' package
-    install_requires=[],
+    install_requires=[
+        "inquirer>=2.10.0",
+    ],
     entry_points={
         "console_scripts": [
-            "updatenpmpackages=packUpdate.updatePackages:main",  # Change the command name here
+            "packUpdate=packUpdate.updatePackages:main",
+            "updatepkgs=packUpdate.updatePackages:main",
+            "updatenpmpackages=packUpdate.updatePackages:main",
         ],
     },
     classifiers=[

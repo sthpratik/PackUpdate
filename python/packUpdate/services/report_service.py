@@ -5,8 +5,8 @@ import subprocess
 import json
 import os
 from datetime import datetime
-from utils.logger import log, write_log, get_log_dir
-from services.package_service import get_outdated_packages
+from ..utils.logger import log, write_log, get_log_dir
+from .package_service import get_outdated_packages
 
 def generate_security_report(project_path):
     """Generate security audit report."""

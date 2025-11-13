@@ -59,12 +59,16 @@ npm install -g updatenpmpackages
 # Use either command:
 updatenpmpackages --safe --minor-only
 updatepkgs --safe --minor-only
+# Interactive mode:
+updatepkgs --interactive
 ```
 
 ### Python
 ```bash
 pip install packupdate
-packupdate --safe --minor-only
+packUpdate --safe --minor-only
+# Interactive mode:
+updatepkgs --interactive
 ```
 
 ### Generate Reports
