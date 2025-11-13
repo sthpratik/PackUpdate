@@ -56,7 +56,9 @@ PackUpdate is a versatile tool designed to streamline and manage package updates
 ### Node.js
 ```bash
 npm install -g updatenpmpackages
+# Use either command:
 updatenpmpackages --safe --minor-only
+updatepkgs --safe --minor-only
 ```
 
 ### Python
@@ -68,6 +70,8 @@ packupdate --safe --minor-only
 ### Generate Reports
 ```bash
 updatenpmpackages --generate-report
+# or
+updatepkgs --generate-report
 ```
 
 ### Cleanup Operations

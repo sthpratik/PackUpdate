@@ -62,6 +62,7 @@ const showHelp = (): void => {
 PackUpdate - Node.js Package Updater
 
 Usage: updatenpmpackages [project_path] [options]
+       updatepkgs [project_path] [options]
 
 Arguments:
   project_path              Path to the Node.js project (default: current directory)

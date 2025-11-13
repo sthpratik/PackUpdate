@@ -4,6 +4,10 @@
 
 `updatenpmpackages` is a comprehensive Node.js package that automates the process of updating outdated npm packages with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
 
+**Available Commands:**
+- `updatenpmpackages` - Full command name
+- `updatepkgs` - Short alias for convenience
+
 ## Features
 
 ### 🚀 Core Update Features
@@ -61,15 +65,20 @@ npm link
 ```bash
 # Update packages in current directory
 updatenpmpackages
+# or use the short alias
+updatepkgs
 
 # Update specific project
 updatenpmpackages /path/to/project
+updatepkgs /path/to/project
 
 # Safe mode with testing
 updatenpmpackages --safe
+updatepkgs --safe
 
 # Quiet mode for automation
 updatenpmpackages --quiet
+updatepkgs --quiet
 ```
 
 ### Version-Specific Updates
@@ -77,12 +86,15 @@ updatenpmpackages --quiet
 ```bash
 # Update only minor versions (safer)
 updatenpmpackages --minor-only
+updatepkgs --minor-only
 
 # Multiple update passes
 updatenpmpackages --pass=3
+updatepkgs --pass=3
 
 # Combined safe minor updates
 updatenpmpackages --safe --minor-only
+updatepkgs --safe --minor-only
 ```
 
 ### Analysis & Reporting
@@ -90,12 +102,15 @@ updatenpmpackages --safe --minor-only
 ```bash
 # Generate comprehensive report (no updates)
 updatenpmpackages --generate-report
+updatepkgs --generate-report
 
 # Report with specific project
 updatenpmpackages /path/to/project --generate-report
+updatepkgs /path/to/project --generate-report
 
 # Quiet report generation
 updatenpmpackages --generate-report --quiet
+updatepkgs --generate-report --quiet
 ```
 
 ### Cleanup Operations
@@ -103,12 +118,15 @@ updatenpmpackages --generate-report --quiet
 ```bash
 # Remove unused dependencies
 updatenpmpackages --remove-unused
+updatepkgs --remove-unused
 
 # Deduplicate packages
 updatenpmpackages --dedupe-packages
+updatepkgs --dedupe-packages
 
 # Combined cleanup
 updatenpmpackages --remove-unused --dedupe-packages
+updatepkgs --remove-unused --dedupe-packages
 ```
 
 ## Command Line Options

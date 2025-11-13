@@ -2,6 +2,13 @@
 
 PackUpdate is a versatile tool designed to streamline and manage package updates efficiently. It is available as both a Node.js and Python package, catering to developers across different ecosystems.
 
+## 🚀 Get Started
+
+**Quick Start:**
+- **Node.js**: `npm install -g updatenpmpackages` → `updatepkgs --help`
+- **Python**: `pip install packUpdate` → `packUpdate --help`
+- **Documentation**: [https://sthpratik.github.io/PackUpdate/#/](https://sthpratik.github.io/PackUpdate/#/)
+
 ## Features
 - Easy package management with modular architecture
 - Automated update checks with dependency resolution
