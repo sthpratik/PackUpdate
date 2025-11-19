@@ -2,7 +2,7 @@
 
 ## Overview
 
-PackUpdate features a **modular, KISS-compliant architecture** with comprehensive safety mechanisms, AI integration capabilities, and intelligent package management features.
+PackUpdate features a **modular, KISS-compliant architecture** with comprehensive safety mechanisms, AI integration capabilities, intelligent package management features, and complete Git automation workflows.
 
 ## Core Principles
 
@@ -18,32 +18,41 @@ PackUpdate features a **modular, KISS-compliant architecture** with comprehensiv
 - **Safe Package Prioritization**: Low-risk updates first
 - **Comprehensive Testing**: Build and test validation after each update
 
+### Automation-Ready Design
+- **Git Workflow Integration**: Complete automation from clone to PR
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab compatibility
+- **SSH Authentication**: Secure git operations with auto-configuration
+- **Workspace Isolation**: Unique temporary environments for parallel execution
+
 ## Node.js Architecture
 
 ### Directory Structure
 ```
 src/
 ├── types.ts                    # Centralized type definitions
-├── updatePackages.ts          # Main entry point (70 lines)
+├── updatePackages.ts          # Main entry point with automation integration
 ├── utils/                     # Utility modules
 │   ├── logger.ts             # Dual logging system (summary + detailed)
 │   ├── version.ts            # Version comparison utilities
-│   └── cli.ts               # CLI argument parsing & help
+│   └── cli.ts               # Extended CLI parsing with automation flags
 └── services/                 # Business logic modules
     ├── packageService.ts     # NPM operations & package management
     ├── dependencyService.ts  # Dependency analysis & resolution
     ├── testService.ts       # Test & build execution
     ├── reportService.ts     # Security & dependency reporting
     ├── updateService.ts     # Update orchestration & smart algorithms
-    └── cleanupService.ts    # Package cleanup & optimization
+    ├── cleanupService.ts    # Package cleanup & optimization
+    ├── automationService.ts # Git automation & workflow management
+    ├── interactiveService.ts # Interactive package selection
+    └── versionService.ts    # Project version management
 ```
 
 ### Core Components
 
 #### 🎯 Main Entry Point (`updatePackages.ts`)
-- **Responsibility**: Application orchestration and flow control
-- **Size**: ~70 lines (reduced from 400+ through refactoring)
-- **Functions**: CLI parsing, path validation, operation routing
+- **Responsibility**: Application orchestration, flow control, and automation workflow
+- **Size**: ~300 lines (expanded with automation integration)
+- **Functions**: CLI parsing, path validation, operation routing, automation workflow execution
 
 #### 🔧 Utilities (`utils/`)
 
@@ -59,8 +68,10 @@ src/
 - **Update Compatibility**: Version comparison utilities
 
 **CLI (`cli.ts`)**
-- **Argument Parsing**: Flag detection and validation
-- **Help System**: Comprehensive usage documentation
+- **Argument Parsing**: Extended flag detection and validation with automation support
+- **Help System**: Comprehensive usage documentation with automation examples
+- **Environment Variables**: Support for default configuration via environment variables
+- **Platform Validation**: Bitbucket Server, GitHub, GitLab parameter validation
 - **Special Flags**: Version, type, help handling
 
 #### 🏗️ Services (`services/`)
@@ -89,6 +100,26 @@ src/
 - **Output Logging**: Full build/test output preservation
 - **Conditional Execution**: Script existence validation
 
+**Automation Service (`automationService.ts`)**
+- **Git Operations**: SSH-based clone, branch creation, commit, push
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab integration
+- **SSH Configuration**: Auto-detection of SSH ports and hostnames
+- **Pull Request Creation**: API-based PR generation with detailed descriptions
+- **Workspace Management**: Unique temporary directories with cleanup
+- **Error Handling**: Comprehensive validation and recovery
+
+**Interactive Service (`interactiveService.ts`)**
+- **Package Selection**: Checkbox-based interactive package selection
+- **Version Control**: Individual package version strategy selection
+- **Batch Operations**: Multiple package updates with different strategies
+- **User Experience**: Intuitive CLI interface with clear options
+
+**Version Service (`versionService.ts`)**
+- **Project Version Management**: Automatic version bumping after updates
+- **Semver Compliance**: Proper semantic versioning format maintenance
+- **Flexible Updates**: Support for major, minor, patch, or specific versions
+- **Dual File Updates**: Updates both package.json and package-lock.json
+
 **Cleanup Service (`cleanupService.ts`)**
 - **Unused Package Detection**: Depcheck integration with fallback
 - **Deduplication**: npm dedupe with statistics
@@ -106,14 +137,19 @@ src/
 ```
 packUpdate/
 ├── main.py                   # Entry point with proper imports
-├── updatePackages.py        # Main application logic
+├── updatePackages.py        # Main application logic with automation
 ├── utils/                   # Utility modules
 │   ├── logger.py           # Logging utilities with dual system
 │   ├── version.py          # Version comparison functions
-│   └── cli.py             # CLI argument parsing & help
+│   └── cli.py             # Extended CLI parsing with automation flags
 └── services/               # Business logic modules
     ├── package_service.py  # NPM operations
     ├── report_service.py   # Report generation
+    ├── automation_service.py # Git automation & workflow management
+    ├── interactive_service.py # Interactive package selection
+    ├── version_service.py  # Project version management
+    └── cleanup_service.py  # Package cleanup & optimization
+```
     └── cleanup_service.py  # Package cleanup operations
 ```
 
@@ -133,22 +169,81 @@ graph TD
     C -->|Update| D[Get Outdated Packages]
     C -->|Report| E[Generate Report]
     C -->|Cleanup| F[Cleanup Operations]
+    C -->|Automate| G[Automation Workflow]
     
-    D --> G[Breaking Change Analysis]
-    G --> H[Prioritize Safe Packages]
-    H --> I[Resolve Dependencies]
-    I --> J[Smart Update Algorithm]
+    D --> H[Breaking Change Analysis]
+    H --> I[Prioritize Safe Packages]
+    I --> J[Resolve Dependencies]
+    J --> K[Smart Update Algorithm]
     
-    J --> K{Safe Mode?}
-    K -->|Yes| L[Try Latest → Wanted → Revert]
-    K -->|No| M[Try Latest Only]
+    K --> L{Safe Mode?}
+    L -->|Yes| M[Try Latest → Wanted → Revert]
+    L -->|No| N[Try Latest Only]
     
-    L --> N[Run Tests After Each]
-    M --> O[Install Package]
-    N --> P[Log Results]
-    O --> P
-    P --> Q[Final Summary]
+    M --> O[Run Tests After Each]
+    N --> P[Install Package]
+    O --> Q[Log Results]
+    P --> Q
+    Q --> R[Final Summary]
+    
+    G --> S[Setup Workspace]
+    S --> T[Clone Repository]
+    T --> U[Create Feature Branch]
+    U --> V[Install Dependencies]
+    V --> W[Generate Report]
+    W --> X[Execute Updates]
+    X --> Y[Commit & Push]
+    Y --> Z[Create Pull Request]
+    Z --> AA[Cleanup Workspace]
 ```
+
+### Automation Architecture
+
+```mermaid
+graph TD
+    A[Automation Request] --> B[Validate Configuration]
+    B --> C[Create Unique Workspace]
+    C --> D{Platform Type?}
+    
+    D -->|Bitbucket Server| E[Get SSH Info from API]
+    D -->|GitHub/GitLab| F[Use Standard SSH]
+    
+    E --> G[Clone via SSH]
+    F --> G
+    G --> H[Detect Base Branch]
+    H --> I[Create Feature Branch]
+    I --> J[Install Dependencies]
+    J --> K[Generate Pre-Update Report]
+    K --> L[Execute Package Updates]
+    L --> M[Check for Changes]
+    
+    M -->|No Changes| N[Log Success & Cleanup]
+    M -->|Has Changes| O[Stage & Commit]
+    
+    O --> P[Push Feature Branch]
+    P --> Q{Platform API?}
+    
+    Q -->|Bitbucket Server| R[Create PR via API]
+    Q -->|GitHub/GitLab| S[Manual PR Instructions]
+    
+    R --> T[Add Reviewers]
+    S --> U[Cleanup Workspace]
+    T --> U
+    N --> U
+```
+
+### Multi-Platform Support
+
+**Bitbucket Server Integration:**
+- SSH port auto-detection via API
+- Bearer token authentication for API calls
+- Automatic PR creation with detailed descriptions
+- Reviewer assignment support
+
+**GitHub/GitLab Integration:**
+- Standard SSH authentication (port 22)
+- Branch creation and pushing
+- Manual PR creation (automated CLI tools planned)
 
 ### Logging Architecture
 ```mermaid

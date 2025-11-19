@@ -7,7 +7,7 @@ long_description = (this_directory / "python.md").read_text()
 
 setup(
     name="packupdate",
-    version="1.0.7",
+    version="1.1.0",
     description="A Python utility to update Node.js project dependencies safely with interactive mode and version management.",
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -17,6 +17,7 @@ setup(
     packages=find_packages(),  # Automatically finds the 'packUpdate' package
     install_requires=[
         "inquirer>=2.10.0",
+        "requests>=2.25.0",
     ],
     entry_points={
         "console_scripts": [

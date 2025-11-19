@@ -2,11 +2,11 @@
 
 ## Overview
 
-`packUpdate` is a comprehensive Python utility that automates the process of updating Node.js project dependencies with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
+`updatepkgs` is a comprehensive Python utility that automates the process of updating Node.js project dependencies with intelligent dependency resolution, breaking change detection, and comprehensive safety mechanisms.
 
 **Available Commands:**
-- `packUpdate` - Main command name
-- `updatepkgs` - Short alias for convenience
+- `updatepkgs` - Main command (consistent across Node.js and Python)
+- `packUpdate` - Alternative command name
 
 ## Features
 
@@ -31,11 +31,122 @@
 - **Success-Based Updates**: Only updates version if package updates were successful
 - **Semver Compliance**: Maintains proper semantic versioning format
 
+### 🤖 Git Automation
+- **Complete Workflow Automation**: Clone → Update → Commit → PR
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab
+- **Smart Branch Management**: Auto-detects develop/master branches
+- **Pull Request Generation**: Detailed PRs with update logs and security reports
+- **Ticket Integration**: Jira/ticket linking in commits and PRs
+- **SSH Authentication**: Secure git operations with SSH keys
+
 ### 📝 Advanced Logging
 - **Comprehensive Logging**: Creates unique timestamped log files for every run
 - **Quiet Mode**: Runs in background with minimal console output while maintaining full logging
 - **Error Tracking**: All errors are captured with detailed information
 - **Success Tracking**: Successful updates are logged with version details
+
+## SSH Key Setup for Automation
+
+The automation features require SSH keys for git operations. Follow these steps to set up SSH authentication:
+
+### 1. Generate SSH Key
+```bash
+# Generate a new SSH key (if you don't have one)
+ssh-keygen -t rsa -b 4096 -C "your.email@company.com"
+
+# Save to default location (~/.ssh/id_rsa) when prompted
+# Set a passphrase for security (recommended)
+```
+
+### 2. Add to SSH Agent
+```bash
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add your SSH key
+ssh-add ~/.ssh/id_rsa
+
+# For macOS, add to keychain
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+```
+
+### 3. Add Public Key to Git Servers
+
+**Copy your public key:**
+```bash
+cat ~/.ssh/id_rsa.pub
+```
+
+**Bitbucket Server:**
+- Personal Settings → SSH keys → Add key
+- Paste public key content
+
+**GitHub:**
+- Settings → SSH and GPG keys → New SSH key
+- Paste public key content
+
+**GitLab:**
+- User Settings → SSH Keys → Add key
+- Paste public key content
+
+### 4. Test SSH Connection
+```bash
+# Test your connections
+ssh -T git@your-bitbucket-server.com
+ssh -T git@github.com
+ssh -T git@gitlab.com
+```
+
+### 5. Configure Custom SSH Ports (if needed)
+Edit `~/.ssh/config`:
+```
+Host your-bitbucket-server.com
+    HostName your-bitbucket-server.com
+    Port 7999
+    User git
+    IdentityFile ~/.ssh/id_rsa
+```
+
+For detailed SSH setup instructions, see the [Automation Documentation](https://sthpratik.github.io/PackUpdate/#/automation).
+
+### Automation Examples
+
+```bash
+# Basic Bitbucket Server automation
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --endpoint https://your-bitbucket-server.com \
+  --token your-access-token \
+  --repository WORKSPACE/repository \
+  --ticket-no JIRA-456
+
+# GitHub automation with safe mode
+updatepkgs --automate \
+  --platform github \
+  --repository myorg/myapp \
+  --safe \
+  --minor-only
+
+# Combined with existing features
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --repository WORKSPACE/webapp \
+  --pass=3 \
+  --remove-unused \
+  --reviewers john.doe,jane.smith
+```
+
+### Environment Variables
+
+```bash
+# Set defaults to avoid repeating parameters
+export PACKUPDATE_BITBUCKET_TOKEN="your-token"
+export PACKUPDATE_BITBUCKET_ENDPOINT="https://your-bitbucket-server.com"
+export PACKUPDATE_REVIEWERS="john.doe,jane.smith"
+
+# Then use simplified commands
+updatepkgs --automate --platform bitbucket-server --repository WORKSPACE/repo
+```
 
 ## Prerequisites
 
@@ -57,24 +168,18 @@ pip install packupdate
 
 ```bash
 # Update packages in current directory
-packUpdate
-# or use the short alias
 updatepkgs
 
 # Update specific project
-packUpdate /path/to/project
 updatepkgs /path/to/project
 
 # Safe mode with testing
-packUpdate --safe
 updatepkgs --safe
 
 # Interactive mode for selective updates
-packUpdate --interactive
 updatepkgs --interactive
 
 # Quiet mode for automation
-packUpdate --quiet
 updatepkgs --quiet
 ```
 
@@ -82,11 +187,9 @@ updatepkgs --quiet
 
 ```bash
 # Interactive package selection
-packUpdate --interactive
 updatepkgs --interactive
 
 # Interactive with safe mode
-packUpdate --interactive --safe
 updatepkgs --interactive --safe
 ```
 
@@ -101,15 +204,15 @@ updatepkgs --interactive --safe
 
 ```bash
 # Update packages and bump project version
-packUpdate --update-version=minor
+updatepkgs --update-version=minor
 updatepkgs --update-version=major
 
 # Set specific project version after updates
-packUpdate --update-version=1.2.3
+updatepkgs --update-version=1.2.3
 updatepkgs --update-version=2.0.0
 
 # Combined with other options
-packUpdate --safe --update-version=patch
+updatepkgs --safe --update-version=patch
 updatepkgs --interactive --update-version=minor
 ```
 
@@ -123,15 +226,12 @@ updatepkgs --interactive --update-version=minor
 
 ```bash
 # Update only minor versions (safer)
-packUpdate --minor-only
 updatepkgs --minor-only
 
 # Multiple update passes
-packUpdate --pass=3
 updatepkgs --pass=3
 
 # Combined safe minor updates
-packUpdate --safe --minor-only
 updatepkgs --safe --minor-only
 ```
 
@@ -139,15 +239,12 @@ updatepkgs --safe --minor-only
 
 ```bash
 # Generate comprehensive report (no updates)
-packUpdate --generate-report
 updatepkgs --generate-report
 
 # Report with specific project
-packUpdate /path/to/project --generate-report
 updatepkgs /path/to/project --generate-report
 
 # Quiet report generation
-packUpdate --generate-report --quiet
 updatepkgs --generate-report --quiet
 ```
 
@@ -155,15 +252,12 @@ updatepkgs --generate-report --quiet
 
 ```bash
 # Remove unused dependencies
-packUpdate --remove-unused
 updatepkgs --remove-unused
 
 # Deduplicate packages
-packUpdate --dedupe-packages
 updatepkgs --dedupe-packages
 
 # Combined cleanup
-packUpdate --remove-unused --dedupe-packages
 updatepkgs --remove-unused --dedupe-packages
 ```
 

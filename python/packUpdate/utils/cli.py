@@ -12,6 +12,15 @@ def parse_cli_args():
     
     pass_arg = next((arg for arg in flags if arg.startswith("--pass=")), None)
     update_version_arg = next((arg for arg in flags if arg.startswith("--update-version=")), None)
+    platform_arg = next((arg for arg in flags if arg.startswith("--platform=")), None)
+    endpoint_arg = next((arg for arg in flags if arg.startswith("--endpoint=")), None)
+    token_arg = next((arg for arg in flags if arg.startswith("--token=")), None)
+    repository_arg = next((arg for arg in flags if arg.startswith("--repository=")), None)
+    base_branch_arg = next((arg for arg in flags if arg.startswith("--base-branch=")), None)
+    feature_branch_arg = next((arg for arg in flags if arg.startswith("--feature-branch=")), None)
+    ticket_no_arg = next((arg for arg in flags if arg.startswith("--ticket-no=")), None)
+    workspace_dir_arg = next((arg for arg in flags if arg.startswith("--workspace-dir=")), None)
+    reviewers_arg = next((arg for arg in flags if arg.startswith("--reviewers=")), None)
     
     return {
         'project_path': non_flags[0] if non_flags else os.getcwd(),
@@ -23,7 +32,18 @@ def parse_cli_args():
         'dedupe_packages': "--dedupe-packages" in flags,
         'quiet_mode': "--quiet" in flags,
         'passes': int(pass_arg.split("=")[1]) if pass_arg else 1,
-        'update_version': update_version_arg.split("=")[1] if update_version_arg else None
+        'update_version': update_version_arg.split("=")[1] if update_version_arg else None,
+        # Automation flags
+        'automate': "--automate" in flags,
+        'platform': platform_arg.split("=")[1] if platform_arg else None,
+        'endpoint': endpoint_arg.split("=")[1] if endpoint_arg else os.getenv('PACKUPDATE_BITBUCKET_ENDPOINT'),
+        'token': token_arg.split("=")[1] if token_arg else os.getenv('PACKUPDATE_BITBUCKET_TOKEN'),
+        'repository': repository_arg.split("=")[1] if repository_arg else None,
+        'base_branch': base_branch_arg.split("=")[1] if base_branch_arg else os.getenv('PACKUPDATE_BASE_BRANCH', 'develop'),
+        'feature_branch': feature_branch_arg.split("=")[1] if feature_branch_arg else None,
+        'ticket_no': ticket_no_arg.split("=")[1] if ticket_no_arg else None,
+        'workspace_dir': workspace_dir_arg.split("=")[1] if workspace_dir_arg else os.getenv('PACKUPDATE_WORKSPACE_DIR', './temp-updates'),
+        'reviewers': reviewers_arg.split("=")[1] if reviewers_arg else os.getenv('PACKUPDATE_REVIEWERS')
     }
 
 def handle_special_flags():
@@ -67,23 +87,60 @@ Options:
   --dedupe-packages        Remove duplicate dependencies
   --update-version=<type>  Update project version after successful updates (major|minor|patch|x.y.z)
   --pass=<number>          Number of update passes (default: 1)
+
+Automation Options:
+  --automate               Enable Git automation workflow
+  --platform=<type>        Git platform (bitbucket-server|github|gitlab)
+  --endpoint=<url>         Bitbucket server base URL (e.g., https://your-bitbucket-server.com)
+  --token=<token>          Authentication token (for bitbucket-server platform)
+  --repository=<repo>      Repository in format workspace/repo or org/repo
+  --base-branch=<branch>   Base branch to create feature branch from (default: develop)
+  --feature-branch=<name>  Custom feature branch name (default: auto-generated)
+  --ticket-no=<ticket>     Ticket number for commit messages and PR linking
+  --workspace-dir=<path>   Temporary workspace directory (default: ./temp-updates)
+  --reviewers=<list>       Comma-separated list of reviewers for PR
+
   --version                Show package version
   --type                   Show package type (python)
   --help                   Show this help message
 
+Environment Variables:
+  PACKUPDATE_BITBUCKET_TOKEN     Default Bitbucket authentication token
+  PACKUPDATE_BITBUCKET_ENDPOINT  Default Bitbucket server endpoint
+  PACKUPDATE_BASE_BRANCH         Default base branch
+  PACKUPDATE_WORKSPACE_DIR       Default workspace directory
+  PACKUPDATE_REVIEWERS           Default reviewers (comma-separated)
+
 Examples:
+  # Basic usage
   packUpdate                                  # Update current directory
   packUpdate /path/to/project                 # Update specific project
   packUpdate --safe --quiet                   # Safe and quiet mode
-  packUpdate --interactive                    # Interactive package selection
-  packUpdate --minor-only                     # Only minor version updates
   packUpdate --generate-report                # Generate security & dependency report
-  packUpdate --remove-unused                  # Remove unused dependencies
-  packUpdate --dedupe-packages                # Remove duplicate dependencies
-  packUpdate --update-version=minor           # Update packages and bump minor version
-  packUpdate --update-version=1.2.3           # Update packages and set specific version
-  packUpdate --pass=3                         # Multiple passes
-  packUpdate --version                        # Show version
+
+  # Automation examples
+  packUpdate --automate \\
+    --platform bitbucket-server \\
+    --endpoint https://your-bitbucket-server.com \\
+    --token your-access-token \\
+    --repository WORKSPACE/repository \\
+    --ticket-no JIRA-456 \\
+    --reviewers john.doe,jane.smith
+
+  packUpdate --automate \\
+    --platform github \\
+    --repository myorg/myapp \\
+    --minor-only \\
+    --safe
+
+  # Combined automation with existing features
+  packUpdate --automate \\
+    --platform bitbucket-server \\
+    --repository WORKSPACE/webapp \\
+    --ticket-no PROJ-789 \\
+    --pass=3 \\
+    --remove-unused \\
+    --quiet
 """)
 
 def show_version():

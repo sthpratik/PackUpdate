@@ -9,6 +9,10 @@ from .utils.cli import parse_cli_args, handle_special_flags
 from .services.report_service import generate_comprehensive_report
 from .services.package_service import get_outdated_packages, get_dependency_tree, install_package
 from .services.interactive_service import InteractiveService
+from .services.automation_service import (
+    create_automation_config, validate_automation_config, setup_workspace,
+    commit_and_push, create_pull_request, cleanup_workspace
+)
 from .services.version_service import VersionService
 
 def validate_project_path(project_path):
@@ -263,6 +267,159 @@ def handle_cleanup_operations(project_path, remove_unused, dedupe_packages, quie
     write_log(f"Cleanup operations completed - Log file: {get_log_file()}")
     print(f"Log file created: {get_log_file()}")
 
+def execute_automation_workflow(cli_args):
+    """Execute automation workflow"""
+    config = create_automation_config(cli_args)
+    
+    try:
+        # Validate configuration
+        validate_automation_config(config)
+        
+        log("\n🤖 Starting PackUpdate Automation Workflow")
+        log(f"📁 Repository: {config['repository']}")
+        log(f"🌿 Feature Branch: {config['feature_branch']}")
+        log(f"🎯 Base Branch: {config['base_branch']}")
+        
+        # Setup workspace and clone repository
+        setup_result = setup_workspace(config)
+        if not setup_result['success']:
+            raise Exception(setup_result['message'])
+        
+        # Generate initial report in the cloned repository
+        log("\n📊 Generating pre-update report...")
+        report_path = config['workspace_dir']
+        
+        # Generate comprehensive report (this will be used for PR description)
+        report_data = {}
+        try:
+            generate_comprehensive_report(report_path)
+            
+            # Get outdated packages for the report
+            outdated_packages = get_outdated_packages(report_path)
+            report_data = {
+                'dependencies': {
+                    'outdated': len(outdated_packages),
+                    'outdated_list': outdated_packages
+                },
+                'security': {'vulnerable_packages': []},
+                'breakingChanges': {'safeUpdates': [], 'riskyUpdates': []},
+                'recommendations': []
+            }
+        except Exception as error:
+            log(f"⚠️  Report generation failed: {error}")
+        
+        # Execute package updates in the cloned repository
+        log("\n🚀 Executing package updates...")
+        safe_mode = cli_args['safe_mode']
+        minor_only = cli_args['minor_only']
+        quiet_mode = cli_args['quiet_mode']
+        passes = cli_args['passes']
+        update_version = cli_args['update_version']
+        
+        all_results = []
+        for i in range(passes):
+            log(f"\n=== Pass {i + 1} ===")
+            result = run_single_update_pass(report_path, safe_mode, minor_only, quiet_mode)
+            all_results.append(result)
+
+            if not result.get('updated'):
+                log("No more outdated packages found.")
+                break
+        
+        # Update project version if requested and updates were successful
+        if update_version and any(result.get('updated') for result in all_results):
+            VersionService.update_project_version(report_path, update_version, quiet_mode)
+        
+        # Print summary
+        print_final_summary(all_results, passes)
+        
+        # Commit and push changes
+        commit_result = commit_and_push(config, all_results)
+        if not commit_result['success']:
+            if all(not result.get('updated') for result in all_results):
+                log("✅ No packages needed updating - repository is already up to date!")
+                log("🎉 Automation workflow completed successfully (no changes needed)!")
+                return
+            else:
+                raise Exception(commit_result['message'])
+        
+        # Create pull request
+        pr_result = create_pull_request(config, all_results, report_data)
+        if pr_result['success'] and pr_result.get('pr_url'):
+            log(f"✅ Pull request created: {pr_result['pr_url']}")
+        else:
+            log(f"⚠️  {pr_result['message']}")
+        
+        log("\n🎉 Automation workflow completed successfully!")
+        
+    except Exception as error:
+        log(f"❌ Automation workflow failed: {error}")
+        raise error
+    finally:
+        # Always cleanup workspace
+        cleanup_workspace(config)
+
+def run_single_update_pass(project_path, safe_mode, minor_only, quiet_mode):
+    """Run a single update pass and return results"""
+    outdated_packages = get_outdated_packages(project_path, minor_only)
+    
+    if not outdated_packages:
+        return {'updated': [], 'failed': []}
+    
+    dependency_tree = get_dependency_tree(project_path)
+    update_order = resolve_update_order(outdated_packages, dependency_tree)
+    
+    updated_packages = []
+    failed_updates = []
+    
+    for package in update_order:
+        details = outdated_packages[package]
+        target_version = details['latest']
+        
+        log(f"Updating {package} from {details['current']} to {target_version}...")
+        
+        try:
+            success = install_package(package, target_version, project_path, safe_mode, quiet_mode)
+            if success:
+                updated_packages.append((package, details['current'], target_version))
+                log(f"✅ Successfully updated {package}")
+            else:
+                failed_updates.append(package)
+                log(f"❌ Failed to update {package}")
+        except Exception as error:
+            failed_updates.append(package)
+            log(f"❌ Failed to update {package}: {error}")
+    
+    return {'updated': updated_packages, 'failed': failed_updates}
+
+def print_final_summary(all_results, passes):
+    """Print final summary of all update passes"""
+    log("\n" + "=" * 60)
+    log("Final Update Summary:")
+    log("{:<40} {:<12} {:<12}".format("Package", "Old Version", "New Version"))
+    log("-" * 60)
+    
+    total_updated = 0
+    total_failed = 0
+    
+    for i, result in enumerate(all_results):
+        if result.get('updated'):
+            log(f"\n=== Pass {i + 1} ===")
+            for package, old_version, new_version in result['updated']:
+                log("{:<40} {:<12} {:<12}".format(package, old_version, new_version))
+                total_updated += 1
+        
+        total_failed += len(result.get('failed', []))
+    
+    if total_failed > 0:
+        log(f"\nPackages that failed to update across all passes: {total_failed}")
+        for result in all_results:
+            for package in result.get('failed', []):
+                log(f"- {package}")
+    
+    log(f"\nTotal packages updated: {total_updated}")
+    log(f"Total packages failed: {total_failed}")
+
 def main():
     """Main application entry point"""
     # Handle special flags first (help, version, type)
@@ -281,12 +438,18 @@ def main():
     quiet_mode = cli_args['quiet_mode']
     passes = cli_args['passes']
     update_version = cli_args['update_version']
+    automate = cli_args['automate']
 
     # Set up logging
     set_quiet_mode(quiet_mode)
-    write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Interactive: {interactive}, Minor Only: {minor_only}, Generate Report: {generate_report}, Remove Unused: {remove_unused}, Dedupe: {dedupe_packages}, Passes: {passes}, Update Version: {update_version or 'none'}, Quiet: {quiet_mode}")
+    write_log(f"PackUpdate started - Project: {project_path}, Safe Mode: {safe_mode}, Interactive: {interactive}, Minor Only: {minor_only}, Generate Report: {generate_report}, Remove Unused: {remove_unused}, Dedupe: {dedupe_packages}, Passes: {passes}, Update Version: {update_version or 'none'}, Quiet: {quiet_mode}, Automate: {automate or False}")
     
-    # Validate project path
+    # Handle automation workflow
+    if automate:
+        execute_automation_workflow(cli_args)
+        return
+    
+    # Validate project path for non-automation workflows
     validate_project_path(project_path)
     
     # Handle cleanup operations

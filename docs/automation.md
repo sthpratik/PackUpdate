@@ -15,6 +15,149 @@ The automation workflow:
 8. **PR**: Create pull request with detailed logs and recommendations
 9. **Cleanup**: Remove temporary workspace
 
+## SSH Key Setup
+
+The automation features use SSH for git operations (clone, push) and API tokens for pull request creation. You need to set up SSH keys for authentication.
+
+### Step 1: Generate SSH Key (if you don't have one)
+
+```bash
+# Generate a new SSH key
+ssh-keygen -t rsa -b 4096 -C "your.email@company.com"
+
+# When prompted, save it to default location (~/.ssh/id_rsa)
+# Set a passphrase for security (optional but recommended)
+```
+
+### Step 2: Add SSH Key to SSH Agent
+
+```bash
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add your SSH key to the agent
+ssh-add ~/.ssh/id_rsa
+
+# For macOS, add to keychain (optional)
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+```
+
+### Step 3: Add SSH Key to Bitbucket Server
+
+1. **Copy your public key:**
+   ```bash
+   # Display and copy your public key
+   cat ~/.ssh/id_rsa.pub
+   ```
+
+2. **Add to Bitbucket Server:**
+   - Log into your Bitbucket Server
+   - Go to **Personal Settings** (click your avatar → Manage account)
+   - Click **SSH keys** in the left sidebar
+   - Click **Add key**
+   - Paste your public key content
+   - Give it a descriptive label (e.g., "PackUpdate Automation")
+   - Click **Add key**
+
+### Step 4: Add SSH Key to GitHub (if using GitHub)
+
+1. **Copy your public key:**
+   ```bash
+   cat ~/.ssh/id_rsa.pub
+   ```
+
+2. **Add to GitHub:**
+   - Go to GitHub Settings → SSH and GPG keys
+   - Click **New SSH key**
+   - Paste your public key
+   - Give it a title
+   - Click **Add SSH key**
+
+### Step 5: Add SSH Key to GitLab (if using GitLab)
+
+1. **Copy your public key:**
+   ```bash
+   cat ~/.ssh/id_rsa.pub
+   ```
+
+2. **Add to GitLab:**
+   - Go to GitLab User Settings → SSH Keys
+   - Paste your public key in the **Key** field
+   - Give it a title
+   - Click **Add key**
+
+### Step 6: Test SSH Connection
+
+```bash
+# Test Bitbucket Server connection
+ssh -T git@your-bitbucket-server.com
+
+# Test GitHub connection
+ssh -T git@github.com
+
+# Test GitLab connection
+ssh -T git@gitlab.com
+```
+
+**Expected responses:**
+- **Bitbucket Server**: Connection successful message
+- **GitHub**: "Hi username! You've successfully authenticated..."
+- **GitLab**: "Welcome to GitLab, @username!"
+
+### Step 7: Configure SSH for Custom Ports (if needed)
+
+If your Bitbucket Server uses a custom SSH port, create/edit `~/.ssh/config`:
+
+```bash
+# Edit SSH config
+nano ~/.ssh/config
+```
+
+Add configuration:
+```
+Host your-bitbucket-server.com
+    HostName your-bitbucket-server.com
+    Port 7999
+    User git
+    IdentityFile ~/.ssh/id_rsa
+```
+
+### Troubleshooting SSH Issues
+
+**Permission denied errors:**
+```bash
+# Check SSH key permissions
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_rsa
+chmod 644 ~/.ssh/id_rsa.pub
+```
+
+**Connection timeout:**
+```bash
+# Test with verbose output
+ssh -vT git@your-bitbucket-server.com
+```
+
+**Multiple SSH keys:**
+```bash
+# Generate specific key for work
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa_work -C "work@company.com"
+
+# Add to SSH config
+Host work-bitbucket
+    HostName your-bitbucket-server.com
+    User git
+    IdentityFile ~/.ssh/id_rsa_work
+```
+
+### Security Best Practices
+
+1. **Use passphrases** on SSH keys
+2. **Rotate keys regularly** (annually)
+3. **Use separate keys** for different services
+4. **Remove unused keys** from servers
+5. **Monitor SSH key usage** in server logs
+
 ## Quick Start
 
 ### Bitbucket Server
