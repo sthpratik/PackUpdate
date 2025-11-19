@@ -13,6 +13,14 @@ import { removeUnusedPackages, dedupePackages } from "./services/cleanupService"
 import { InteractiveService } from "./services/interactiveService";
 import { getOutdatedPackages } from "./services/packageService";
 import { VersionService } from "./services/versionService";
+import { 
+  createAutomationConfig, 
+  validateAutomationConfig, 
+  setupWorkspace, 
+  commitAndPush, 
+  createPullRequest, 
+  cleanupWorkspace 
+} from "./services/automationService";
 
 /**
  * Validate project path exists and is a directory
@@ -86,8 +94,116 @@ const executeUpdateProcess = (
 };
 
 /**
- * Execute interactive mode for selective package updates
+ * Execute automation workflow
  */
+const executeAutomationWorkflow = async (cliArgs: any): Promise<void> => {
+  const config = createAutomationConfig(cliArgs);
+  
+  try {
+    // Validate configuration
+    validateAutomationConfig(config);
+    
+    log("\n🤖 Starting PackUpdate Automation Workflow");
+    log(`📁 Repository: ${config.repository}`);
+    log(`🌿 Feature Branch: ${config.featureBranch}`);
+    log(`🎯 Base Branch: ${config.baseBranch}`);
+    
+    // Setup workspace and clone repository
+    const setupResult = await setupWorkspace(config);
+    if (!setupResult.success) {
+      throw new Error(setupResult.message);
+    }
+    
+    // Generate initial report in the cloned repository
+    log("\n📊 Generating pre-update report...");
+    const reportPath = config.workspaceDir;
+    
+    // Temporarily change project path for report generation
+    const originalProjectPath = cliArgs.projectPath;
+    cliArgs.projectPath = reportPath;
+    
+    // Generate comprehensive report (this will be used for PR description)
+    let reportData: any = {};
+    try {
+      // Capture report data by temporarily redirecting the report generation
+      const { generateComprehensiveReport } = require("./services/reportService");
+      
+      // We need to modify this to return data instead of just logging
+      // For now, we'll generate it and parse the log files
+      generateComprehensiveReport(reportPath);
+      
+      // Get outdated packages for the report
+      const outdatedPackages = getOutdatedPackages(reportPath);
+      reportData = {
+        dependencies: {
+          outdated: Object.keys(outdatedPackages).length,
+          outdated_list: outdatedPackages
+        },
+        security: { vulnerable_packages: [] },
+        breakingChanges: { safeUpdates: [], riskyUpdates: [] },
+        recommendations: []
+      };
+    } catch (error) {
+      log(`⚠️  Report generation failed: ${error}`);
+    }
+    
+    // Execute package updates in the cloned repository
+    log("\n🚀 Executing package updates...");
+    const { safeMode, minorOnly, quietMode, passes, updateVersion } = cliArgs;
+    
+    const allResults: UpdateResult[] = [];
+    for (let i = 0; i < passes; i++) {
+      log(`\n=== Pass ${i + 1} ===`);
+      const result = updatePackagesInPass(reportPath, safeMode, minorOnly, quietMode);
+      allResults.push(result);
+
+      if (result.updated.length === 0) {
+        log("No more outdated packages found.");
+        break;
+      }
+    }
+    
+    // Update project version if requested and updates were successful
+    if (updateVersion && allResults.some(result => result.updated.length > 0)) {
+      VersionService.updateProjectVersion(reportPath, updateVersion, quietMode);
+    }
+    
+    // Print summary
+    printFinalSummary(allResults, passes);
+    
+    // Commit and push changes
+    const commitResult = commitAndPush(config, allResults);
+    if (!commitResult.success) {
+      if (allResults.every(r => r.updated.length === 0)) {
+        log("✅ No packages needed updating - repository is already up to date!");
+        log("🎉 Automation workflow completed successfully (no changes needed)!");
+        return;
+      } else {
+        throw new Error(commitResult.message);
+      }
+    }
+    
+    // Create pull request
+    const prResult = await createPullRequest(config, allResults, reportData);
+    if (prResult.success && prResult.prUrl) {
+      log(`✅ Pull request created: ${prResult.prUrl}`);
+    } else {
+      log(`⚠️  ${prResult.message}`);
+    }
+    
+    // Restore original project path
+    cliArgs.projectPath = originalProjectPath;
+    
+    log("\n🎉 Automation workflow completed successfully!");
+    
+  } catch (error) {
+    log(`❌ Automation workflow failed: ${error}`);
+    throw error;
+  } finally {
+    // Always cleanup workspace
+    cleanupWorkspace(config);
+  }
+};
 const executeInteractiveMode = async (projectPath: string, safeMode: boolean, quietMode: boolean, updateVersion?: string): Promise<void> => {
   try {
     log("🔍 Checking for outdated packages...");
@@ -161,13 +277,19 @@ const main = async (): Promise<void> => {
 
   // Parse CLI arguments
   const cliArgs = parseCliArgs();
-  const { projectPath, safeMode, interactive, minorOnly, generateReport, removeUnused, dedupePackages, quietMode, passes, updateVersion } = cliArgs;
+  const { projectPath, safeMode, interactive, minorOnly, generateReport, removeUnused, dedupePackages, quietMode, passes, updateVersion, automate } = cliArgs;
 
   // Set up logging
   setQuietMode(quietMode);
-  writeLog(`PackUpdate started - Project: ${projectPath}, Safe Mode: ${safeMode}, Interactive: ${interactive}, Minor Only: ${minorOnly}, Generate Report: ${generateReport}, Remove Unused: ${removeUnused}, Dedupe: ${dedupePackages}, Passes: ${passes}, Update Version: ${updateVersion || 'none'}, Quiet: ${quietMode}`);
+  writeLog(`PackUpdate started - Project: ${projectPath}, Safe Mode: ${safeMode}, Interactive: ${interactive}, Minor Only: ${minorOnly}, Generate Report: ${generateReport}, Remove Unused: ${removeUnused}, Dedupe: ${dedupePackages}, Passes: ${passes}, Update Version: ${updateVersion || 'none'}, Quiet: ${quietMode}, Automate: ${automate || false}`);
 
-  // Validate project path
+  // Handle automation workflow
+  if (automate) {
+    await executeAutomationWorkflow(cliArgs);
+    return;
+  }
+
+  // Validate project path for non-automation workflows
   validateProjectPath(projectPath);
 
   // Handle cleanup operations

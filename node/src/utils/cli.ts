@@ -16,6 +16,15 @@ export const parseCliArgs = (): CliArgs => {
   
   const passArg = flags.find((arg) => arg.startsWith("--pass="));
   const updateVersionArg = flags.find((arg) => arg.startsWith("--update-version="));
+  const platformArg = flags.find((arg) => arg.startsWith("--platform="));
+  const endpointArg = flags.find((arg) => arg.startsWith("--endpoint="));
+  const tokenArg = flags.find((arg) => arg.startsWith("--token="));
+  const repositoryArg = flags.find((arg) => arg.startsWith("--repository="));
+  const baseBranchArg = flags.find((arg) => arg.startsWith("--base-branch="));
+  const featureBranchArg = flags.find((arg) => arg.startsWith("--feature-branch="));
+  const ticketNoArg = flags.find((arg) => arg.startsWith("--ticket-no="));
+  const workspaceDirArg = flags.find((arg) => arg.startsWith("--workspace-dir="));
+  const reviewersArg = flags.find((arg) => arg.startsWith("--reviewers="));
   
   return {
     projectPath: nonFlags[0] || process.cwd(),
@@ -27,7 +36,18 @@ export const parseCliArgs = (): CliArgs => {
     dedupePackages: flags.includes("--dedupe-packages"),
     quietMode: flags.includes("--quiet"),
     passes: passArg ? parseInt(passArg.split("=")[1], 10) : 1,
-    updateVersion: updateVersionArg ? updateVersionArg.split("=")[1] : undefined
+    updateVersion: updateVersionArg ? updateVersionArg.split("=")[1] : undefined,
+    // Automation flags
+    automate: flags.includes("--automate"),
+    platform: platformArg ? platformArg.split("=")[1] as any : undefined,
+    endpoint: endpointArg ? endpointArg.split("=")[1] : process.env.PACKUPDATE_BITBUCKET_ENDPOINT,
+    token: tokenArg ? tokenArg.split("=")[1] : process.env.PACKUPDATE_BITBUCKET_TOKEN,
+    repository: repositoryArg ? repositoryArg.split("=")[1] : undefined,
+    baseBranch: baseBranchArg ? baseBranchArg.split("=")[1] : process.env.PACKUPDATE_BASE_BRANCH || 'develop',
+    featureBranch: featureBranchArg ? featureBranchArg.split("=")[1] : undefined,
+    ticketNo: ticketNoArg ? ticketNoArg.split("=")[1] : undefined,
+    workspaceDir: workspaceDirArg ? workspaceDirArg.split("=")[1] : process.env.PACKUPDATE_WORKSPACE_DIR || './temp-updates',
+    reviewers: reviewersArg ? reviewersArg.split("=")[1] : process.env.PACKUPDATE_REVIEWERS
   };
 };
 
@@ -80,23 +100,60 @@ Options:
   --dedupe-packages        Remove duplicate dependencies
   --update-version=<type>  Update project version after successful updates (major|minor|patch|x.y.z)
   --pass=<number>          Number of update passes (default: 1)
+
+Automation Options:
+  --automate               Enable Git automation workflow
+  --platform=<type>        Git platform (bitbucket-server|github|gitlab)
+  --endpoint=<url>         Bitbucket server base URL (e.g., https://git.cnvrmedia.net)
+  --token=<token>          Authentication token (for bitbucket-server platform)
+  --repository=<repo>      Repository in format workspace/repo or org/repo
+  --base-branch=<branch>   Base branch to create feature branch from (default: develop)
+  --feature-branch=<name>  Custom feature branch name (default: auto-generated)
+  --ticket-no=<ticket>     Ticket number for commit messages and PR linking
+  --workspace-dir=<path>   Temporary workspace directory (default: ./temp-updates)
+  --reviewers=<list>       Comma-separated list of reviewers for PR
+
   --version                Show package version
   --type                   Show package type (nodejs)
   --help                   Show this help message
 
+Environment Variables:
+  PACKUPDATE_BITBUCKET_TOKEN     Default Bitbucket authentication token
+  PACKUPDATE_BITBUCKET_ENDPOINT  Default Bitbucket server endpoint
+  PACKUPDATE_BASE_BRANCH         Default base branch
+  PACKUPDATE_WORKSPACE_DIR       Default workspace directory
+  PACKUPDATE_REVIEWERS           Default reviewers (comma-separated)
+
 Examples:
+  # Basic usage
   updatenpmpackages                           # Update current directory
   updatenpmpackages /path/to/project         # Update specific project
   updatenpmpackages --safe --quiet           # Safe and quiet mode
-  updatenpmpackages --interactive            # Interactive package selection
-  updatenpmpackages --minor-only             # Only minor version updates
   updatenpmpackages --generate-report        # Generate security & dependency report
-  updatenpmpackages --remove-unused          # Remove unused dependencies
-  updatenpmpackages --dedupe-packages        # Remove duplicate dependencies
-  updatenpmpackages --update-version=minor   # Update packages and bump minor version
-  updatenpmpackages --update-version=1.2.3   # Update packages and set specific version
-  updatenpmpackages --pass=3                 # Multiple passes
-  updatenpmpackages --version                # Show version
+
+  # Automation examples
+  updatenpmpackages --automate \\
+    --platform bitbucket-server \\
+    --endpoint https://your-bitbucket-server.com \\
+    --token your-access-token \\
+    --repository WORKSPACE/repository \\
+    --ticket-no JIRA-456 \\
+    --reviewers john.doe,jane.smith
+
+  updatenpmpackages --automate \\
+    --platform github \\
+    --repository myorg/myapp \\
+    --minor-only \\
+    --safe
+
+  # Combined automation with existing features
+  updatenpmpackages --automate \\
+    --platform bitbucket-server \\
+    --repository WORKSPACE/webapp \\
+    --ticket-no PROJ-789 \\
+    --pass=3 \\
+    --remove-unused \\
+    --quiet
 `);
 };
 

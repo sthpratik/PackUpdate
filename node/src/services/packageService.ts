@@ -13,6 +13,7 @@ import { isMinorUpdate } from "../utils/version";
  * @returns Record of outdated packages
  */
 export const getOutdatedPackages = (projectPath: string, minorOnly: boolean = false): Record<string, OutdatedPackage> => {
+  log(`🔍 Checking for outdated packages in: ${projectPath}`);
   const result = spawnSync("npm", ["outdated", "--json"], { cwd: projectPath, encoding: "utf-8" });
 
   if (result.error) {
@@ -22,16 +23,33 @@ export const getOutdatedPackages = (projectPath: string, minorOnly: boolean = fa
     return {};
   }
 
+  // Debug: Log the raw output
+  log(`📋 npm outdated stdout: ${result.stdout ? 'has content' : 'empty'}`);
+  log(`📋 npm outdated stderr: ${result.stderr || 'none'}`);
+  log(`📋 npm outdated exit code: ${result.status}`);
+
   if (result.stdout) {
     try {
-      let outdatedPackages = JSON.parse(result.stdout);
+      const rawData = JSON.parse(result.stdout);
+      let outdatedPackages: Record<string, OutdatedPackage> = {};
+      
+      // Handle different npm outdated JSON formats
+      for (const [pkg, details] of Object.entries(rawData)) {
+        const packageDetails = details as any;
+        
+        // Convert to our expected format
+        outdatedPackages[pkg] = {
+          current: packageDetails.current || 'MISSING', // Handle missing packages
+          wanted: packageDetails.wanted || packageDetails.latest,
+          latest: packageDetails.latest
+        };
+      }
       
       if (minorOnly) {
         const filtered: Record<string, OutdatedPackage> = {};
         for (const [pkg, details] of Object.entries(outdatedPackages)) {
-          const packageDetails = details as OutdatedPackage;
-          if (isMinorUpdate(packageDetails.current, packageDetails.latest)) {
-            filtered[pkg] = packageDetails;
+          if (isMinorUpdate(details.current, details.latest)) {
+            filtered[pkg] = details;
           }
         }
         outdatedPackages = filtered;
@@ -45,6 +63,8 @@ export const getOutdatedPackages = (projectPath: string, minorOnly: boolean = fa
       const errorMsg = `Error parsing npm outdated output: ${parseError}`;
       console.error(errorMsg);
       writeLog(`ERROR: ${errorMsg}`);
+      // Debug: Show raw output that failed to parse
+      log(`📋 Raw output that failed to parse: ${result.stdout.substring(0, 500)}`);
     }
   } else {
     writeLog("No outdated packages found (empty npm outdated output)");

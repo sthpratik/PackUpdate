@@ -46,8 +46,8 @@ export const generateDependencyReport = (projectPath: string): DependencyReport 
  */
 const checkBreakingChanges = (packageName: string, currentVersion: string, latestVersion: string): any => {
   // Check if major version change (likely breaking)
-  const currentMajor = parseInt(currentVersion.split('.')[0]);
-  const latestMajor = parseInt(latestVersion.split('.')[0]);
+  const currentMajor = parseInt((currentVersion || '0.0.0').split('.')[0]);
+  const latestMajor = parseInt((latestVersion || '0.0.0').split('.')[0]);
   const hasMajorChange = latestMajor > currentMajor;
   
   // Get package info for changelog analysis
@@ -258,6 +258,14 @@ const displayReportSummary = (report: ComprehensiveReport, reportFile: string): 
   if (report.breakingChanges.riskyUpdates.length > 0) {
     log(`\n⚠️  RISKY UPDATES (Potential Breaking Changes):`);
     report.breakingChanges.riskyUpdates.forEach((pkg: string) => log(`  - ${pkg}`));
+  }
+  
+  // Show detailed outdated packages
+  if (Object.keys(report.dependencies.outdated_list).length > 0) {
+    log(`\n📦 OUTDATED PACKAGES:`);
+    Object.entries(report.dependencies.outdated_list).forEach(([pkg, details]: [string, any]) => {
+      log(`  - ${pkg}: ${details.current} → ${details.wanted} (latest: ${details.latest})`);
+    });
   }
   
   log(`\n💡 RECOMMENDATIONS:`);

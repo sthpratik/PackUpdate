@@ -58,4 +58,44 @@ export interface CliArgs {
   quietMode: boolean;
   passes: number;
   updateVersion?: string;
+  // Automation flags
+  automate?: boolean;
+  platform?: 'bitbucket-server' | 'github' | 'gitlab';
+  endpoint?: string;
+  token?: string;
+  repository?: string;
+  baseBranch?: string;
+  featureBranch?: string;
+  ticketNo?: string;
+  workspaceDir?: string;
+  reviewers?: string;
+}
+
+export interface AutomationConfig {
+  platform: 'bitbucket-server' | 'github' | 'gitlab';
+  endpoint?: string;
+  token?: string;
+  repository: string;
+  baseBranch: string;
+  featureBranch: string;
+  ticketNo?: string;
+  workspaceDir: string;
+  projectPath: string;
+  reviewers: string[];
+}
+
+export interface GitOperationResult {
+  success: boolean;
+  message: string;
+  branchCreated?: boolean;
+  commitHash?: string;
+  prUrl?: string;
+}
+
+export interface PullRequestData {
+  title: string;
+  description: string;
+  sourceBranch: string;
+  targetBranch: string;
+  reviewers: string[];
 }

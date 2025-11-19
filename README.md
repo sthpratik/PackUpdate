@@ -78,6 +78,15 @@ For Q CLI integration with progress logging, see the [MCP Integration Guide](htt
 
 ## New Features
 
+### Git Automation Workflow
+- **`--automate`**: Complete Git workflow automation
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab
+- **Smart Branching**: Auto-detects develop/master, creates feature branches
+- **PR Generation**: Creates detailed pull requests with update logs and security reports
+- **Ticket Integration**: Links commits and PRs to Jira tickets
+- **Reviewer Assignment**: Automatically assigns reviewers to pull requests
+- **Parallel Processing**: Multiple repositories can be processed simultaneously
+
 ### Maintenance Automation
 - **`--remove-unused`**: Clean up unused dependencies
 - **`--dedupe-packages`**: Remove duplicate dependencies

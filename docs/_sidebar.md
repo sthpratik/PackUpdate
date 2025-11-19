@@ -4,6 +4,8 @@
 - **Packages**
   - [Node.js Package](nodejs.md)
   - [Python Package](python.md)
+- **Automation**
+  - [Git Automation](automation.md)
 - **MCP Integration**
   - [MCP Server](mcp-server.md)
   - [MCP Integration Guide](mcp-integration.md)
