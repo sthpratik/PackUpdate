@@ -3,6 +3,7 @@ Package management operations
 """
 import subprocess
 import json
+import os
 from ..utils.logger import log, write_log
 from ..utils.version import is_minor_update
 
@@ -67,14 +68,55 @@ def sanitize_json_output(output):
     sanitized_output = output.replace("false", "false").replace("true", "true").replace("null", "null")
     return sanitized_output
 
-def install_package(package, version, project_path, quiet_mode):
+def install_package(package, version, project_path, safe_mode, quiet_mode):
     """Install a specific package version."""
     try:
-        log(f"\nUpdating {package} to {version}...")
-        subprocess.run(["npm", "install", f"{package}@{version}"], cwd=project_path, check=True,
-                      capture_output=quiet_mode, text=True)
+        log(f"Updating {package} from current to {version}...")
+        
+        # Install the package
+        result = subprocess.run(["npm", "install", f"{package}@{version}"], 
+                              cwd=project_path, 
+                              check=True,
+                              capture_output=quiet_mode, 
+                              text=True)
+        
+        if safe_mode:
+            # Run tests after installation in safe mode
+            log(f"🧪 Running tests after updating {package}...")
+            try:
+                # Check if test script exists
+                package_json_path = os.path.join(project_path, "package.json")
+                if os.path.isfile(package_json_path):
+                    with open(package_json_path, 'r') as f:
+                        package_data = json.load(f)
+                    
+                    scripts = package_data.get('scripts', {})
+                    
+                    # Run test if available
+                    if 'test' in scripts:
+                        subprocess.run(["npm", "test"], cwd=project_path, check=True,
+                                     capture_output=quiet_mode, text=True)
+                        log(f"✅ Tests passed for {package}")
+                    
+                    # Run build if available
+                    if 'build' in scripts:
+                        subprocess.run(["npm", "run", "build"], cwd=project_path, check=True,
+                                     capture_output=quiet_mode, text=True)
+                        log(f"✅ Build passed for {package}")
+                        
+            except subprocess.CalledProcessError as test_error:
+                log(f"❌ Tests/build failed for {package}, reverting...")
+                # Revert the package installation
+                try:
+                    subprocess.run(["npm", "install"], cwd=project_path, check=True,
+                                 capture_output=quiet_mode, text=True)
+                except:
+                    pass
+                raise Exception(f"Tests/build failed for {package}: {test_error}")
+        
+        return True
+        
     except subprocess.CalledProcessError as e:
         error_msg = f"Error installing {package}@{version}: {e}"
         write_log(f"ERROR: {error_msg}")
         raise Exception(error_msg)
-    return True

@@ -248,6 +248,236 @@ graph TD
 ### Logging Architecture
 ```mermaid
 graph LR
+    A[Operation] --> B[Summary Logger]
+    A --> C[Detailed Logger]
+    B --> D[packupdate-TIMESTAMP.log]
+    C --> E[packupdate-detailed-TIMESTAMP.log]
+    D --> F[High-level Events]
+    E --> G[Full Command Output]
+```
+
+## Sequence Diagrams
+
+### Standard Update Flow
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant PackageService
+    participant UpdateService
+    participant TestService
+    participant Logger
+    
+    User->>CLI: updatepkgs [options]
+    CLI->>CLI: Parse Arguments
+    CLI->>PackageService: getOutdatedPackages()
+    PackageService->>PackageService: npm outdated --json
+    PackageService-->>CLI: outdatedPackages[]
+    
+    CLI->>UpdateService: updatePackages(packages)
+    
+    loop For each package
+        UpdateService->>PackageService: installPackage(pkg, 'latest')
+        PackageService->>PackageService: npm install pkg@latest
+        PackageService-->>UpdateService: success/failure
+        
+        alt Success
+            UpdateService->>TestService: runTests()
+            TestService->>TestService: npm run build && npm test
+            TestService-->>UpdateService: testResult
+            
+            alt Tests Pass
+                UpdateService->>Logger: logSuccess(pkg)
+            else Tests Fail
+                UpdateService->>PackageService: installPackage(pkg, 'wanted')
+                PackageService-->>UpdateService: result
+                UpdateService->>TestService: runTests()
+                TestService-->>UpdateService: testResult
+                
+                alt Tests Pass
+                    UpdateService->>Logger: logSuccess(pkg, 'wanted')
+                else Tests Fail
+                    UpdateService->>PackageService: revertPackage(pkg)
+                    UpdateService->>Logger: logFailure(pkg)
+                end
+            end
+        else Failure
+            UpdateService->>Logger: logFailure(pkg)
+        end
+    end
+    
+    UpdateService-->>CLI: updateResults
+    CLI->>Logger: generateSummary()
+    Logger-->>User: Display Summary
+```
+
+### Automation Workflow Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant AutomationService
+    participant GitAPI
+    participant PackageService
+    participant UpdateService
+    participant ReportService
+    
+    User->>CLI: updatepkgs --automate [options]
+    CLI->>CLI: Validate Automation Config
+    CLI->>AutomationService: startAutomation(config)
+    
+    AutomationService->>AutomationService: createWorkspace()
+    AutomationService->>GitAPI: getSSHInfo()
+    GitAPI-->>AutomationService: sshHost, sshPort
+    
+    AutomationService->>AutomationService: cloneRepository(ssh)
+    AutomationService->>AutomationService: detectBaseBranch()
+    AutomationService->>AutomationService: createFeatureBranch()
+    
+    AutomationService->>PackageService: installDependencies()
+    PackageService-->>AutomationService: installed
+    
+    AutomationService->>ReportService: generatePreReport()
+    ReportService-->>AutomationService: securityReport
+    
+    AutomationService->>UpdateService: executeUpdates()
+    
+    loop For each package
+        UpdateService->>PackageService: updatePackage()
+        PackageService-->>UpdateService: result
+    end
+    
+    UpdateService-->>AutomationService: updateResults
+    
+    AutomationService->>AutomationService: checkForChanges()
+    
+    alt Has Changes
+        AutomationService->>AutomationService: stageChanges()
+        AutomationService->>AutomationService: createCommit()
+        AutomationService->>AutomationService: pushBranch()
+        
+        AutomationService->>GitAPI: createPullRequest()
+        GitAPI-->>AutomationService: prUrl
+        
+        alt Has Reviewers
+            AutomationService->>GitAPI: assignReviewers()
+        end
+        
+        AutomationService->>CLI: Success + PR URL
+    else No Changes
+        AutomationService->>CLI: No updates needed
+    end
+    
+    AutomationService->>AutomationService: cleanupWorkspace()
+    CLI-->>User: Display Results
+```
+
+### Report Generation Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant ReportService
+    participant PackageService
+    participant DependencyService
+    
+    User->>CLI: updatepkgs --generate-report
+    CLI->>ReportService: generateReport()
+    
+    ReportService->>PackageService: getOutdatedPackages()
+    PackageService-->>ReportService: outdatedList
+    
+    ReportService->>PackageService: auditPackages()
+    PackageService->>PackageService: npm audit --json
+    PackageService-->>ReportService: vulnerabilities
+    
+    ReportService->>DependencyService: analyzeDependencies()
+    DependencyService->>DependencyService: Check circular deps
+    DependencyService->>DependencyService: Analyze peer deps
+    DependencyService-->>ReportService: dependencyAnalysis
+    
+    loop For each outdated package
+        ReportService->>ReportService: detectBreakingChanges()
+        ReportService->>ReportService: assessUpdateRisk()
+    end
+    
+    ReportService->>ReportService: categorizePackages()
+    ReportService->>ReportService: generateRecommendations()
+    
+    ReportService->>ReportService: saveJSONReport()
+    ReportService->>CLI: reportData
+    CLI-->>User: Display Report + File Path
+```
+
+### Interactive Update Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant InteractiveService
+    participant PackageService
+    participant UpdateService
+    
+    User->>CLI: updatepkgs --interactive
+    CLI->>PackageService: getOutdatedPackages()
+    PackageService-->>CLI: packages[]
+    
+    CLI->>InteractiveService: selectPackages(packages)
+    InteractiveService->>User: Display checkbox list
+    User->>InteractiveService: Select packages
+    InteractiveService-->>CLI: selectedPackages[]
+    
+    loop For each selected package
+        CLI->>InteractiveService: selectUpdateStrategy(pkg)
+        InteractiveService->>User: Choose: latest/wanted/specific
+        User->>InteractiveService: Select strategy
+        InteractiveService-->>CLI: strategy
+    end
+    
+    CLI->>UpdateService: updatePackages(selected, strategies)
+    UpdateService->>PackageService: Execute updates
+    PackageService-->>UpdateService: results
+    UpdateService-->>CLI: summary
+    CLI-->>User: Display Results
+```
+
+### Cleanup Operations Sequence
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI
+    participant CleanupService
+    participant PackageService
+    
+    User->>CLI: updatepkgs --remove-unused --dedupe-packages
+    CLI->>CleanupService: startCleanup()
+    
+    alt Remove Unused
+        CleanupService->>CleanupService: runDepcheck()
+        CleanupService->>CleanupService: analyzeUnused()
+        
+        loop For each unused package
+            CleanupService->>PackageService: uninstallPackage(pkg)
+            PackageService-->>CleanupService: result
+        end
+    end
+    
+    alt Dedupe Packages
+        CleanupService->>PackageService: dedupePackages()
+        PackageService->>PackageService: npm dedupe
+        PackageService-->>CleanupService: stats
+    end
+    
+    CleanupService->>CLI: cleanupResults
+    CLI-->>User: Display Summary
+```
+
+## Logging Architecture
     A[Console Output] --> B[log()]
     B --> C[Console Display]
     B --> D[Detailed Log]

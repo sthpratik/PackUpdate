@@ -1,0 +1,10 @@
+# Development dependencies for PackUpdate Python package
+
+# Building and publishing
+wheel>=0.40.0
+twine>=4.0.0
+setuptools>=65.0.0
+
+# Testing (already in setup.py but listed here for clarity)
+# inquirer>=2.10.0
+# requests>=2.25.0

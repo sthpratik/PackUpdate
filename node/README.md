@@ -27,6 +27,14 @@
 - **Deduplicate Packages**: Optimize node_modules with npm dedupe
 - **Package Optimization**: Reduce bundle size and complexity
 
+### 🤖 Git Automation
+- **Complete Workflow Automation**: Clone → Update → Commit → PR
+- **Multi-Platform Support**: Bitbucket Server, GitHub, GitLab
+- **Smart Branch Management**: Auto-detects develop/master branches
+- **Pull Request Generation**: Detailed PRs with update logs and security reports
+- **Ticket Integration**: Jira/ticket linking in commits and PRs
+- **SSH Authentication**: Secure git operations with SSH keys
+
 ### 📊 Comprehensive Reporting
 - **Security & Dependency Reports**: Detailed JSON and console reports
 - **Breaking Change Analysis**: Risk assessment with actionable recommendations
@@ -38,6 +46,108 @@
 - **Complete Output Capture**: Full npm command output preservation
 - **Quiet Mode**: Automation-friendly minimal output
 - **Audit Trails**: Complete operation history
+
+## SSH Key Setup for Automation
+
+The automation features require SSH keys for git operations. Follow these steps to set up SSH authentication:
+
+### 1. Generate SSH Key
+```bash
+# Generate a new SSH key (if you don't have one)
+ssh-keygen -t rsa -b 4096 -C "your.email@company.com"
+
+# Save to default location (~/.ssh/id_rsa) when prompted
+# Set a passphrase for security (recommended)
+```
+
+### 2. Add to SSH Agent
+```bash
+# Start SSH agent
+eval "$(ssh-agent -s)"
+
+# Add your SSH key
+ssh-add ~/.ssh/id_rsa
+
+# For macOS, add to keychain
+ssh-add --apple-use-keychain ~/.ssh/id_rsa
+```
+
+### 3. Add Public Key to Git Servers
+
+**Copy your public key:**
+```bash
+cat ~/.ssh/id_rsa.pub
+```
+
+**Bitbucket Server:**
+- Personal Settings → SSH keys → Add key
+- Paste public key content
+
+**GitHub:**
+- Settings → SSH and GPG keys → New SSH key
+- Paste public key content
+
+**GitLab:**
+- User Settings → SSH Keys → Add key
+- Paste public key content
+
+### 4. Test SSH Connection
+```bash
+# Test your connections
+ssh -T git@your-bitbucket-server.com
+ssh -T git@github.com
+ssh -T git@gitlab.com
+```
+
+### 5. Configure Custom SSH Ports (if needed)
+Edit `~/.ssh/config`:
+```
+Host your-bitbucket-server.com
+    HostName your-bitbucket-server.com
+    Port 7999
+    User git
+    IdentityFile ~/.ssh/id_rsa
+```
+
+For detailed SSH setup instructions, see the [Automation Documentation](https://sthpratik.github.io/PackUpdate/#/automation).
+
+### Automation Examples
+
+```bash
+# Basic Bitbucket Server automation (safe mode automatic)
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --endpoint https://your-bitbucket-server.com \
+  --token your-access-token \
+  --repository WORKSPACE/repository \
+  --ticket-no JIRA-456
+
+# GitHub automation with minor-only updates (safe mode automatic)
+updatepkgs --automate \
+  --platform github \
+  --repository myorg/myapp \
+  --minor-only
+
+# Combined with existing features (safe mode automatic)
+updatepkgs --automate \
+  --platform bitbucket-server \
+  --repository WORKSPACE/webapp \
+  --pass=3 \
+  --remove-unused \
+  --reviewers john.doe,jane.smith
+```
+
+### Environment Variables
+
+```bash
+# Set defaults to avoid repeating parameters
+export PACKUPDATE_BITBUCKET_TOKEN="your-token"
+export PACKUPDATE_BITBUCKET_ENDPOINT="https://your-bitbucket-server.com"
+export PACKUPDATE_REVIEWERS="john.doe,jane.smith"
+
+# Then use simplified commands
+updatepkgs --automate --platform bitbucket-server --repository WORKSPACE/repo
+```
 
 ## Installation
 

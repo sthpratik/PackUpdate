@@ -7,7 +7,7 @@ long_description = (this_directory / "python.md").read_text()
 
 setup(
     name="packupdate",
-    version="1.1.0",
+    version="1.1.4",
     description="A Python utility to update Node.js project dependencies safely with interactive mode and version management.",
     long_description=long_description,
     long_description_content_type='text/markdown',

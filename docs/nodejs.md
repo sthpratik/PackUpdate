@@ -114,7 +114,7 @@ For detailed SSH setup instructions, see the [Automation Documentation](https://
 ### Automation Examples
 
 ```bash
-# Basic Bitbucket Server automation
+# Basic Bitbucket Server automation (safe mode automatic)
 updatepkgs --automate \
   --platform bitbucket-server \
   --endpoint https://your-bitbucket-server.com \
@@ -122,14 +122,13 @@ updatepkgs --automate \
   --repository WORKSPACE/repository \
   --ticket-no JIRA-456
 
-# GitHub automation with safe mode
+# GitHub automation with minor-only updates (safe mode automatic)
 updatepkgs --automate \
   --platform github \
   --repository myorg/myapp \
-  --safe \
   --minor-only
 
-# Combined with existing features
+# Combined with existing features (safe mode automatic)
 updatepkgs --automate \
   --platform bitbucket-server \
   --repository WORKSPACE/webapp \

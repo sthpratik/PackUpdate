@@ -84,7 +84,7 @@ def run_tests(project_path, quiet_mode):
 
 def update_packages_in_order(outdated_packages, dependency_tree, project_path, safe_mode, quiet_mode):   
     """Update packages in the resolved order."""
-    from services.report_service import get_safe_packages_for_update
+    from .services.report_service import get_safe_packages_for_update
     
     original_order = resolve_update_order(outdated_packages, dependency_tree)
     
@@ -106,28 +106,67 @@ def update_packages_in_order(outdated_packages, dependency_tree, project_path, s
     for package in update_order:
         details = outdated_packages[package]
         current_version = details.get("current")
+        wanted_version = details.get("wanted")
         latest_version = details.get("latest")
+        original_version = current_version  # Store the actual original version
         final_version = current_version
         is_safe = package in safe_packages
         
+        log(f"\n{'✅' if is_safe else '⚠️'} Updating {package} ({'safe' if is_safe else 'risky'})...")
+        
+        update_successful = False
+        
         if safe_mode:
-            log(f"\n{'✅' if is_safe else '⚠️'} Trying to update {package} to latest version {latest_version} ({'safe' if is_safe else 'risky'})...")
+            # Try latest → wanted → revert (with tests after each)
+            
+            # Try latest version first
             try:
-                install_package(package, latest_version, project_path, quiet_mode)
+                log(f"  Trying latest version {latest_version}...")
+                install_package(package, latest_version, project_path, safe_mode, quiet_mode)
                 run_tests(project_path, quiet_mode)
                 final_version = latest_version
-                write_log(f"SUCCESS: Updated {package} from {current_version} to {latest_version} ({'safe' if is_safe else 'risky'})")
-            except:
-                log(f"Update failed for {package}")
-                failed_updates.append(package)
-                write_log(f"FAILED: {package} update failed")
+                update_successful = True
+                log(f"  ✅ Latest version {latest_version} works!")
+            except Exception as error:
+                log(f"  ❌ Latest version {latest_version} failed: {error}")
+                
+                # Try wanted version
+                if wanted_version and wanted_version != latest_version and wanted_version != original_version:
+                    try:
+                        log(f"  Trying wanted version {wanted_version}...")
+                        install_package(package, wanted_version, project_path, safe_mode, quiet_mode)
+                        run_tests(project_path, quiet_mode)
+                        final_version = wanted_version
+                        update_successful = True
+                        log(f"  ✅ Wanted version {wanted_version} works!")
+                    except Exception as error:
+                        log(f"  ❌ Wanted version {wanted_version} failed: {error}")
+                
+                # Revert to original version if both failed
+                if not update_successful:
+                    try:
+                        log(f"  Reverting to original version {original_version}...")
+                        install_package(package, original_version, project_path, safe_mode, quiet_mode)
+                        run_tests(project_path, quiet_mode)
+                        final_version = original_version
+                        log(f"  ✅ Reverted to original version {original_version}")
+                    except Exception as error:
+                        log(f"  ❌ Even revert failed: {error}")
+                        failed_updates.append(package)
+                        write_log(f"FAILED: {package} update failed completely")
+                        updated_packages.append((package, current_version, final_version))
+                        continue
+            
+            # Log success
+            if update_successful:
+                write_log(f"SUCCESS: Updated {package} from {current_version} to {final_version} ({'safe' if is_safe else 'risky'})")
         else:
+            # Without safe mode, just try latest
             if current_version and latest_version and current_version != latest_version:
                 try:
-                    log(f"\n{'✅' if is_safe else '⚠️'} Updating {package} ({'safe' if is_safe else 'risky'})...")
-                    install_package(package, latest_version, project_path, quiet_mode)
-                    run_tests(project_path, quiet_mode)
+                    install_package(package, latest_version, project_path, safe_mode, quiet_mode)
                     final_version = latest_version
+                    update_successful = True
                     write_log(f"SUCCESS: Updated {package} from {current_version} to {latest_version} ({'safe' if is_safe else 'risky'})")
                 except Exception as e:
                     error_msg = f"Failed to update {package}: {e}"
@@ -162,10 +201,14 @@ def run_update_process(project_path, safe_mode, passes, minor_only, quiet_mode, 
     log("\nRunning final npm audit and build...")
     subprocess.run(["npm", "audit", "fix"], cwd=project_path, capture_output=quiet_mode, text=True)
     execute_script_if_exist(project_path, "build", quiet_mode)
-    print_final_summary(all_updated_packages, all_failed_updates)
+    print_update_summary(all_updated_packages, all_failed_updates)
+    
+    # Update project version if requested and updates were successful
+    if update_version and any(updated_packages for _, updated_packages in all_updated_packages):
+        VersionService.update_project_version(project_path, update_version, quiet_mode)
 
-def print_final_summary(all_updated_packages, all_failed_updates):
-    """Print the final summary of updated packages."""
+def print_update_summary(all_updated_packages, all_failed_updates):
+    """Print the final summary of updated packages for standard update process."""
     log("\nFinal Update Summary:")
     log("{:<40} {:<10} {:<10}".format("Package", "Old Version", "New Version"))
     log("-" * 60)
@@ -179,10 +222,6 @@ def print_final_summary(all_updated_packages, all_failed_updates):
         log("\nPackages that failed to update:")
         for package in set(all_failed_updates):
             log(f"- {package}")
-    
-    # Update project version if requested and updates were successful
-    if update_version and any(updated_packages for updated_packages, _ in all_results):
-        VersionService.update_project_version(project_path, update_version, quiet_mode)
 
 def run_interactive_mode(project_path, safe_mode, quiet_mode, update_version=None):
     """Execute interactive mode for selective package updates"""
@@ -252,7 +291,7 @@ def run_interactive_mode(project_path, safe_mode, quiet_mode, update_version=Non
 
 def handle_cleanup_operations(project_path, remove_unused, dedupe_packages, quiet_mode):
     """Handle cleanup operations"""
-    from services.cleanup_service import remove_unused_packages, dedupe_packages as dedupe_func
+    from .services.cleanup_service import remove_unused_packages, dedupe_packages as dedupe_func
     
     log("\n=== Package Cleanup Operations ===")
     
@@ -310,11 +349,13 @@ def execute_automation_workflow(cli_args):
         
         # Execute package updates in the cloned repository
         log("\n🚀 Executing package updates...")
-        safe_mode = cli_args['safe_mode']
         minor_only = cli_args['minor_only']
         quiet_mode = cli_args['quiet_mode']
         passes = cli_args['passes']
         update_version = cli_args['update_version']
+        safe_mode = True  # Always use safe mode for automation to ensure tests pass
+        
+        log("🛡️  Safe mode enabled for automation - tests will run after each update")
         
         all_results = []
         for i in range(passes):
@@ -331,7 +372,7 @@ def execute_automation_workflow(cli_args):
             VersionService.update_project_version(report_path, update_version, quiet_mode)
         
         # Print summary
-        print_final_summary(all_results, passes)
+        print_automation_summary(all_results, passes)
         
         # Commit and push changes
         commit_result = commit_and_push(config, all_results)
@@ -392,8 +433,8 @@ def run_single_update_pass(project_path, safe_mode, minor_only, quiet_mode):
     
     return {'updated': updated_packages, 'failed': failed_updates}
 
-def print_final_summary(all_results, passes):
-    """Print final summary of all update passes"""
+def print_automation_summary(all_results, passes):
+    """Print final summary of all update passes for automation workflow"""
     log("\n" + "=" * 60)
     log("Final Update Summary:")
     log("{:<40} {:<12} {:<12}".format("Package", "Old Version", "New Version"))

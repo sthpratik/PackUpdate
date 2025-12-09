@@ -9,11 +9,13 @@ The automation workflow:
 2. **Branch**: Create feature branch from base branch (develop → master fallback)
 3. **Install**: Install dependencies to ensure proper version detection
 4. **Report**: Generate comprehensive security and dependency report
-5. **Update**: Execute package updates with all existing PackUpdate features
+5. **Update**: Execute package updates with **automatic safe mode** (tests run after each update)
 6. **Commit**: Stage changes and create descriptive commit with ticket linking
 7. **Push**: Push feature branch to remote repository
 8. **PR**: Create pull request with detailed logs and recommendations
 9. **Cleanup**: Remove temporary workspace
+
+**🛡️ Safety First**: Automation always runs in safe mode, ensuring tests and builds pass before committing any changes.
 
 ## SSH Key Setup
 
@@ -240,18 +242,16 @@ updatepkgs --automate --platform bitbucket-server --repository WORKSPACE/reposit
 
 ## Integration with Existing Features
 
-All existing PackUpdate features work with automation:
+All existing PackUpdate features work with automation (safe mode is automatically enabled):
 
 ```bash
-# Safe mode with minor-only updates
+# Minor-only updates (safe mode automatic)
 updatepkgs --automate \
   --platform github \
   --repository myorg/app \
-  --safe \
-  --minor-only \
-  --quiet
+  --minor-only
 
-# Multiple passes with cleanup
+# Multiple passes with cleanup (safe mode automatic)
 updatepkgs --automate \
   --platform bitbucket-server \
   --repository WORKSPACE/webapp \
@@ -259,12 +259,14 @@ updatepkgs --automate \
   --remove-unused \
   --dedupe-packages
 
-# Version bumping after updates
+# Version bumping after updates (safe mode automatic)
 updatepkgs --automate \
   --platform github \
   --repository myorg/api \
   --update-version=minor
 ```
+
+**Note**: The `--safe` flag is automatically enabled for all automation workflows to ensure tests pass before committing changes.
 
 ## Pull Request Content
 

@@ -149,7 +149,10 @@ const executeAutomationWorkflow = async (cliArgs: any): Promise<void> => {
     
     // Execute package updates in the cloned repository
     log("\n🚀 Executing package updates...");
-    const { safeMode, minorOnly, quietMode, passes, updateVersion } = cliArgs;
+    const { minorOnly, quietMode, passes, updateVersion } = cliArgs;
+    const safeMode = true; // Always use safe mode for automation to ensure tests pass
+    
+    log("🛡️  Safe mode enabled for automation - tests will run after each update");
     
     const allResults: UpdateResult[] = [];
     for (let i = 0; i < passes; i++) {

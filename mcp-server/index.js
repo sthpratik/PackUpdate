@@ -48,15 +48,66 @@ class PackUpdateMCPServer {
                 description: "Package manager to use (auto-detects if not specified)", 
                 default: "auto" 
               },
-              safe_mode: { type: "boolean", description: "Enable safe mode", default: false },
-              quiet_mode: { type: "boolean", description: "Enable quiet mode", default: false },
-              minor_only: { type: "boolean", description: "Update only minor versions (1.2.x → 1.3.x, skip major updates)", default: false },
-              generate_report: { type: "boolean", description: "Generate comprehensive security & dependency report (no updates)", default: false },
+              safe_mode: { type: "boolean", description: "Enable safe mode with test validation", default: false },
+              quiet_mode: { type: "boolean", description: "Enable quiet mode (minimal output)", default: false },
+              minor_only: { type: "boolean", description: "Update only minor versions (skip major updates)", default: false },
+              generate_report: { type: "boolean", description: "Generate security & dependency report only", default: false },
               remove_unused: { type: "boolean", description: "Clean up unused dependencies", default: false },
               dedupe_packages: { type: "boolean", description: "Remove duplicate dependencies", default: false },
-              passes: { type: "number", description: "Number of update passes", default: 1 }
+              passes: { type: "number", description: "Number of update passes", default: 1 },
+              update_version: { type: "string", description: "Update project version (major|minor|patch|x.y.z)" }
             },
             required: ["project_path"]
+          }
+        },
+        {
+          name: "update_packages_interactive",
+          description: "Interactively select packages to update with visual prompts",
+          inputSchema: {
+            type: "object",
+            properties: {
+              project_path: { type: "string", description: "Path to the project" },
+              package_manager: { 
+                type: "string", 
+                enum: ["nodejs", "python", "auto"],
+                description: "Package manager to use", 
+                default: "auto" 
+              },
+              safe_mode: { type: "boolean", description: "Enable safe mode", default: true }
+            },
+            required: ["project_path"]
+          }
+        },
+        {
+          name: "automate_updates_with_git",
+          description: "Automate package updates with full Git workflow (clone, update, commit, PR)",
+          inputSchema: {
+            type: "object",
+            properties: {
+              platform: {
+                type: "string",
+                enum: ["bitbucket-server", "github", "gitlab"],
+                description: "Git platform to use"
+              },
+              repository: { type: "string", description: "Repository in format workspace/repo or org/repo" },
+              endpoint: { type: "string", description: "Git server endpoint URL (for Bitbucket Server, can use PACKUPDATE_BITBUCKET_ENDPOINT env var)" },
+              token: { type: "string", description: "Authentication token (optional, can use PACKUPDATE_BITBUCKET_TOKEN or PACKUPDATE_GITHUB_TOKEN env var)" },
+              base_branch: { type: "string", description: "Base branch to create feature branch from", default: "develop" },
+              feature_branch: { type: "string", description: "Custom feature branch name (auto-generated if not provided)" },
+              ticket_no: { type: "string", description: "Ticket number for commit messages and PR linking" },
+              reviewers: { type: "string", description: "Comma-separated list of reviewers" },
+              workspace_dir: { type: "string", description: "Temporary workspace directory" },
+              safe_mode: { type: "boolean", description: "Enable safe mode", default: true },
+              minor_only: { type: "boolean", description: "Update only minor versions", default: false },
+              passes: { type: "number", description: "Number of update passes", default: 1 },
+              package_manager: { 
+                type: "string", 
+                enum: ["nodejs", "python", "auto"],
+                description: "Package manager to use", 
+                default: "auto" 
+              }
+            },
+            required: ["platform", "repository"]
           }
         },
         {
@@ -132,6 +183,10 @@ class PackUpdateMCPServer {
         switch (name) {
           case "update_packages":
             return await this.updatePackages(args);
+          case "update_packages_interactive":
+            return await this.updatePackagesInteractive(args);
+          case "automate_updates_with_git":
+            return await this.automateUpdatesWithGit(args);
           case "get_packupdate_version":
             return await this.getPackUpdateVersion(args);
           case "get_update_logs":
@@ -168,7 +223,8 @@ class PackUpdateMCPServer {
       generate_report = false,
       remove_unused = false,
       dedupe_packages = false,
-      passes = 1 
+      passes = 1,
+      update_version
     } = args;
     
     this.log(`Starting package update for: ${project_path}`);
@@ -203,6 +259,7 @@ class PackUpdateMCPServer {
     if (remove_unused) cmdArgs.push("--remove-unused");
     if (dedupe_packages) cmdArgs.push("--dedupe-packages");
     if (passes > 1) cmdArgs.push(`--pass=${passes}`);
+    if (update_version) cmdArgs.push(`--update-version=${update_version}`);
 
     this.log(`Executing command: ${command} ${cmdArgs.join(' ')}`);
     
@@ -556,6 +613,151 @@ class PackUpdateMCPServer {
       
     } catch (error) {
       report += `\n❌ Error during fix and update: ${error.message}\n`;
+    }
+
+    return {
+      content: [{
+        type: "text",
+        text: report
+      }]
+    };
+  }
+
+  async updatePackagesInteractive(args) {
+    const { project_path, package_manager = "auto", safe_mode = true } = args;
+    
+    this.log(`Starting interactive package update for: ${project_path}`);
+    
+    let manager = package_manager;
+    if (manager === "auto") {
+      manager = await this.detectProjectType(project_path);
+      this.log(`Detected project type: ${manager}`);
+    }
+    
+    const command = "updatenpmpackages";
+    const cmdArgs = [project_path, "--interactive"];
+    
+    if (safe_mode) cmdArgs.push("--safe");
+    
+    this.log(`Executing interactive mode: ${command} ${cmdArgs.join(' ')}`);
+    
+    const result = await this.executeCommandWithProgress(command, cmdArgs, "Interactive package selection", 120000);
+    
+    const logs = await this.getLatestLogContent(project_path);
+
+    return {
+      content: [
+        {
+          type: "text",
+          text: `## Interactive Package Update\n\nPackUpdate (${manager}) interactive mode completed for: ${project_path}\n\nOutput:\n${result.output}\n\nLatest Logs:\n${logs}`
+        }
+      ]
+    };
+  }
+
+  async automateUpdatesWithGit(args) {
+    const {
+      platform,
+      repository,
+      endpoint: providedEndpoint,
+      token: providedToken,
+      base_branch = "develop",
+      feature_branch,
+      ticket_no,
+      reviewers,
+      workspace_dir,
+      safe_mode = true,
+      minor_only = false,
+      passes = 1,
+      package_manager = "auto"
+    } = args;
+    
+    this.log(`Starting Git automation workflow for: ${repository} on ${platform}`);
+    
+    // Use environment variables as fallbacks
+    const endpoint = providedEndpoint || process.env.PACKUPDATE_BITBUCKET_ENDPOINT || process.env.PACKUPDATE_ENDPOINT;
+    const token = providedToken || 
+                  process.env.PACKUPDATE_BITBUCKET_TOKEN || 
+                  process.env.PACKUPDATE_GITHUB_TOKEN || 
+                  process.env.PACKUPDATE_GITLAB_TOKEN ||
+                  process.env.PACKUPDATE_TOKEN;
+    
+    let report = "## Git Automation Workflow\n\n";
+    report += `**Platform**: ${platform}\n`;
+    report += `**Repository**: ${repository}\n`;
+    report += `**Base Branch**: ${base_branch}\n`;
+    if (feature_branch) report += `**Feature Branch**: ${feature_branch}\n`;
+    if (ticket_no) report += `**Ticket**: ${ticket_no}\n`;
+    if (endpoint) report += `**Endpoint**: ${endpoint}\n`;
+    report += `**Token**: ${token ? '***configured***' : '⚠️ not provided'}\n`;
+    report += "\n";
+    
+    const command = "updatenpmpackages";
+    const cmdArgs = ["--automate"];
+    
+    // Platform and repository
+    cmdArgs.push(`--platform=${platform}`);
+    cmdArgs.push(`--repository=${repository}`);
+    
+    // Optional parameters (use environment variables if not provided)
+    if (endpoint) cmdArgs.push(`--endpoint=${endpoint}`);
+    if (token) cmdArgs.push(`--token=${token}`);
+    if (base_branch) cmdArgs.push(`--base-branch=${base_branch}`);
+    if (feature_branch) cmdArgs.push(`--feature-branch=${feature_branch}`);
+    if (ticket_no) cmdArgs.push(`--ticket-no=${ticket_no}`);
+    if (reviewers) cmdArgs.push(`--reviewers=${reviewers}`);
+    if (workspace_dir) cmdArgs.push(`--workspace-dir=${workspace_dir}`);
+    
+    // Update options
+    if (safe_mode) cmdArgs.push("--safe");
+    if (minor_only) cmdArgs.push("--minor-only");
+    if (passes > 1) cmdArgs.push(`--pass=${passes}`);
+    
+    this.log(`Executing automation: ${command} ${cmdArgs.join(' ')}`);
+    
+    report += "### Workflow Steps\n\n";
+    report += "1. 🔄 Cloning repository...\n";
+    report += "2. 🔍 Analyzing dependencies...\n";
+    report += "3. 📦 Updating packages...\n";
+    report += "4. ✅ Running tests...\n";
+    report += "5. 💾 Committing changes...\n";
+    report += "6. 🚀 Pushing to remote...\n";
+    report += "7. 🔀 Creating pull request...\n\n";
+    
+    try {
+      const result = await this.executeCommandWithProgress(
+        command, 
+        cmdArgs, 
+        "Git automation workflow", 
+        300000  // 5 minutes timeout
+      );
+      
+      report += "### Execution Output\n\n";
+      report += "```\n" + result.output + "\n```\n\n";
+      
+      if (result.code === 0) {
+        report += "### ✅ Workflow Completed Successfully\n\n";
+        
+        // Try to extract PR URL from output
+        const prUrlMatch = result.output.match(/Pull request created: (https?:\/\/[^\s]+)/);
+        if (prUrlMatch) {
+          report += `**Pull Request**: ${prUrlMatch[1]}\n\n`;
+        }
+        
+        report += "The package updates have been committed and a pull request has been created.\n";
+        report += "Review the PR and merge when ready.\n";
+      } else {
+        report += "### ⚠️ Workflow Completed with Warnings\n\n";
+        report += "Check the output above for details.\n";
+      }
+      
+    } catch (error) {
+      report += `### ❌ Workflow Failed\n\n`;
+      report += `Error: ${error.message}\n\n`;
+      report += "Please check:\n";
+      report += "- Repository access and credentials\n";
+      report += "- Network connectivity\n";
+      report += "- Platform endpoint configuration\n";
     }
 
     return {

@@ -1,6 +1,6 @@
 - [Home](/)
-- [Architecture](architecture.md)
 - [Features](features.md)
+- [Architecture](architecture.md)
 - **Packages**
   - [Node.js Package](nodejs.md)
   - [Python Package](python.md)
@@ -11,3 +11,5 @@
   - [MCP Integration Guide](mcp-integration.md)
   - [Progress Logging](mcp-progress-logging.md)
 - [Local Development](local-development.md)
+- [Contributing](#contributing)
+- [License](#license)
